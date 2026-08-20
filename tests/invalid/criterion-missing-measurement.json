@@ -1,0 +1,22 @@
+{
+  "odrs_version": "0.1",
+  "type": "data_request",
+  "task": {
+    "category": "manipulation"
+  },
+  "data": {
+    "quantity": {
+      "value": 500,
+      "unit": "episode"
+    }
+  },
+  "acceptance": {
+    "criteria": [
+      {
+        "metric": "sync_error_ms",
+        "operator": "lte",
+        "value": 10
+      }
+    ]
+  }
+}

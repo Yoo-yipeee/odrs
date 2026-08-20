@@ -1,0 +1,16 @@
+{
+  "$comment": "Each fixture must FAIL validation, and the first error must contain the listed substring. Tests enforce both: a fixture that passes, or fails for the wrong reason, is a test failure.",
+  "missing-task.json": "missing required field 'task'",
+  "missing-quantity.json": "missing required field 'quantity'",
+  "invalid-modality.json": "not an allowed value",
+  "retired-unit-trajectory.json": "not an allowed value",
+  "invalid-country.json": "ISO 3166-1",
+  "invalid-version.json": "not a version this validator accepts",
+  "malformed-id.json": "not a valid ODRS id",
+  "wrong-type-quantity.json": "expected number",
+  "invalid-status.json": "not an allowed value",
+  "invalid-date.json": "not a valid date",
+  "criterion-missing-measurement.json": "missing required field 'measurement'",
+  "budget-missing-basis.json": "'basis' is required",
+  "bad-extension-namespace.json": "extension namespaces"
+}

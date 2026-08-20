@@ -1,0 +1,135 @@
+# ODRS v0.1 example — tactile-first grasping with a domain extension.
+#
+# Demonstrates the extension mechanism: sensor-specific requirements that do
+# not belong in the core schema live under a namespaced extension block.
+# Illustrative example; Example Dexterity Inc. is fictional. Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01JBQZP0A7Q2RSTVWXYZ2E5F6G
+
+title: Tactile-rich grasping of fragile and deformable objects
+
+task:
+  category: grasping
+  type: fragile_deformable_grasping
+  description: >
+    Single-arm grasping of eggs, soft fruit, paper cups, filled deli bags and
+    similar failure-prone items. Slip events and crush failures are wanted:
+    the training target is grip-force modulation, and clean successes alone
+    do not teach it.
+  includes_failures: true
+
+embodiment:
+  type: robotic_arm
+  platform: Franka Research 3
+  hands: 1
+
+environment:
+  type: laboratory
+  realism: lab_mockup
+
+data:
+  quantity:
+    value: 25000
+    unit: episode
+  episode_duration_seconds: { minimum: 3, typical: 8, maximum: 30 }
+
+modalities: [rgb, depth, tactile, force_torque, joint_state, action]
+
+capture:
+  method: teleoperation
+  action_space:
+    representation: ee_pose_delta
+    reference_frame: robot_base
+    control_frequency_hz: 100
+  sensors:
+    - modality: tactile
+      viewpoint: in_hand
+      count: 2
+      frequency_hz: 200
+      notes: Both fingertips instrumented.
+    - modality: rgb
+      viewpoint: wrist
+      count: 1
+      resolution: { minimum_width: 640, minimum_height: 480 }
+      frequency_hz: 30
+      calibration_required: true
+    - modality: force_torque
+      viewpoint: other
+      frequency_hz: 500
+      notes: Wrist-mounted 6-axis F/T.
+  synchronization:
+    maximum_error_ms: 5
+    method: hardware_trigger
+
+diversity:
+  distinct_objects: { minimum: 120 }
+  distinct_operators: { minimum: 8 }
+  notes: Object set graded by fragility class; each class at least 15 objects.
+
+geography:
+  collection: [KR, JP]
+  usage: [KR, US]
+
+acceptance:
+  sample:
+    quantity: { value: 100, unit: episode }
+    delivery_days: 14
+    paid: false
+    evaluation: replay_validation
+  criteria:
+    - metric: sync_error_ms
+      operator: lte
+      value: 5
+      unit: ms
+      measurement: >
+        p99 skew between tactile and F/T streams per episode; buyer replay
+        tool over every episode. Tactile-to-vision skew reported but
+        non-blocking.
+      blocking: true
+    - id: failure-floor
+      metric: task_success_rate
+      operator: lte
+      value: 0.85
+      measurement: >
+        Success = object lifted 10cm and held 3s without visible damage or
+        slip past 5mm, judged from wrist RGB + tactile trace by supplier QA
+        and audited by buyer on 10%. Upper bound: at least 15% of episodes
+        must be genuine failures (slips, crushes), because grip-force recovery
+        is the training target.
+      sample_size: 500
+      blocking: true
+
+licensing:
+  commercial_training: true
+  commercial_deployment: true
+  exclusive: true
+  exclusivity_months: 18
+  redistribution: false
+  notes: >
+    Exclusivity is priced in: the buyer expects to pay a premium over
+    non-exclusive market rate for an 18-month exclusive window.
+
+delivery:
+  deadline: "2026-12-15"
+  format: { standard: hdf5, notes: One HDF5 group per episode; layout per attached spec. }
+  transfer: sftp
+
+economics:
+  pricing_model: fixed_budget
+  budget: { min: 6, max: 11, currency: USD, basis: per_unit, unit: episode }
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-10T02:00:00Z"
+  publisher: { type: organization, name: Example Dexterity Inc. }
+  contact: { method: email, value: sourcing@example.invalid }
+
+extensions:
+  tactile:
+    sensor_family: optical_gel
+    minimum_taxel_grid: [16, 16]
+    shear_sensing_required: true
+    calibration: per_session_flat_press

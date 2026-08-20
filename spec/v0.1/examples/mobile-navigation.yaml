@@ -1,0 +1,115 @@
+# ODRS v0.1 example — indoor navigation with an excluded-country constraint.
+# Illustrative example; Example Logistics Robotics is fictional. Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01M0E7XW9W4X269S2BXMPX0WPF
+
+title: Mobile-robot navigation among people in retail and hospital corridors
+
+task:
+  category: navigation
+  type: social_navigation
+  description: >
+    Point-to-point navigation through spaces with uninstructed pedestrians:
+    aisles, corridors, lobbies. Near-miss and yield interactions are the
+    interesting part; empty-corridor runs are capped.
+  includes_failures: true
+
+embodiment:
+  type: mobile_robot
+  alternatives: [quadruped]
+
+environment:
+  type: retail
+  realism: in_the_wild
+  description: Operating stores and hospitals during opening hours, with permits.
+
+data:
+  quantity: { value: 8000, unit: hour, minimum: 1500 }
+
+modalities: [rgb, depth, lidar, imu, action]
+
+capture:
+  method: teleoperation
+  action_space:
+    representation: base_velocity
+    reference_frame: robot_base
+    control_frequency_hz: 20
+  sensors:
+    - modality: lidar
+      viewpoint: scene_fixed
+      count: 1
+      frequency_hz: 10
+      notes: 2D or 3D acceptable; declare model in metadata.
+    - modality: rgb
+      viewpoint: head
+      count: 1
+      resolution: { minimum_width: 1280, minimum_height: 720 }
+      frequency_hz: 30
+      calibration_required: true
+  synchronization: { maximum_error_ms: 25, method: software_timestamp }
+
+diversity:
+  distinct_environments: { minimum: 30 }
+  lighting_conditions: { minimum: 3 }
+  maximum_share_per_environment: 0.08
+  notes: >
+    Pedestrian density must vary: at least 25% of hours in high-traffic
+    periods. Both retail and hospital sites required.
+
+geography:
+  collection: [US, GB, AU]
+  collection_excluded: [CN]
+  usage: [US, GB]
+
+acceptance:
+  sample:
+    quantity: { value: 100, unit: hour }
+    delivery_days: 30
+    paid: true
+    evaluation: manual_review
+  criteria:
+    - metric: frame_drop_rate
+      operator: lte
+      value: 0.01
+      measurement: >
+        Missing frames per stream per hour, from nominal frequency vs
+        received count, computed by buyer ingest over the full delivery.
+      blocking: true
+    - id: interaction-density
+      metric: pedestrian_interactions_per_hour
+      operator: gte
+      value: 12
+      measurement: >
+        Custom metric: an interaction is any pedestrian entering a 2m radius
+        of the robot while both are moving, counted by the buyer's detector
+        on delivered RGB+lidar. Averaged over each 100-hour tranche.
+      blocking: true
+
+metadata:
+  required: [session_id, timestamp_utc, site_id_pseudonymous, sensor_models, robot_model]
+  notes: Faces must be blurred at source before delivery; blurring pipeline documented.
+
+licensing:
+  commercial_training: true
+  commercial_deployment: true
+  redistribution: false
+  exclusive: false
+  consent_artifacts_required: true
+  notes: Site permits and signage records required; per-person consent is impractical in public retail space and the mitigation is at-source blurring.
+
+delivery:
+  deadline: "2027-04-30"
+  format: { standard: rosbag2 }
+  transfer: s3
+
+economics:
+  pricing_model: market_rate
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-12T10:00:00Z"
+  publisher: { type: organization, name: Example Logistics Robotics }
+  contact: { method: url, value: "https://example.invalid/rfd/nav-001" }

@@ -1,0 +1,10 @@
+{
+  "odrs_version": "0.1",
+  "type": "data_request",
+  "data": {
+    "quantity": {
+      "value": 500,
+      "unit": "episode"
+    }
+  }
+}

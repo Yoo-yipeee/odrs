@@ -1,0 +1,116 @@
+{
+  "$comment": "ODRS v0.1 example in canonical JSON form. Humanoid household manipulation, anonymous publisher. Example organizations are fictional. Licensed CC0.",
+  "odrs_version": "0.1",
+  "type": "data_request",
+  "id": "dr_01M0E7XW9P8GCQEBFQNW1B6XHH",
+  "title": "Humanoid household tidying and laundry, real homes",
+  "summary": "Whole-body humanoid manipulation in occupied residences: tidying surfaces, loading and unloading laundry machines, folding garments. Deformable-object handling is the training target.",
+  "task": {
+    "category": "household",
+    "type": "tidying_and_laundry",
+    "description": "Pick up scattered items and return them to stated locations; load, unload and fold laundry. Garment manipulation (folding, hanging) must be at least 40% of episodes.",
+    "includes_failures": true
+  },
+  "embodiment": {
+    "type": "humanoid",
+    "hands": 2,
+    "degrees_of_freedom": 23
+  },
+  "environment": {
+    "type": "home",
+    "realism": "in_the_wild",
+    "description": "Occupied residences, furnished and in everyday use. Show-homes and labs dressed as homes are not accepted."
+  },
+  "data": {
+    "quantity": { "value": 40000, "unit": "episode", "minimum": 5000 },
+    "episode_duration_seconds": { "minimum": 15, "typical": 45, "maximum": 300 }
+  },
+  "modalities": ["rgb", "depth", "joint_state", "action", "tactile"],
+  "capture": {
+    "method": "teleoperation",
+    "action_space": {
+      "representation": "joint_position",
+      "reference_frame": "robot_base",
+      "control_frequency_hz": 50
+    },
+    "sensors": [
+      { "modality": "rgb", "viewpoint": "head", "count": 1, "resolution": { "minimum_width": 1280, "minimum_height": 720 }, "frequency_hz": 30, "calibration_required": true },
+      { "modality": "depth", "viewpoint": "head", "count": 1, "frequency_hz": 15, "calibration_required": true },
+      { "modality": "tactile", "viewpoint": "in_hand", "count": 2, "frequency_hz": 100 }
+    ],
+    "synchronization": { "maximum_error_ms": 10, "method": "hardware_trigger" }
+  },
+  "diversity": {
+    "distinct_environments": { "minimum": 25, "target": 60 },
+    "distinct_objects": { "minimum": 400 },
+    "distinct_operators": { "minimum": 15 },
+    "maximum_share_per_environment": 0.1,
+    "notes": "Garment set must span knits, wovens, and slippery synthetics; at least 5 distinct laundry-machine models."
+  },
+  "geography": {
+    "collection": ["US", "CA"],
+    "usage": ["US"]
+  },
+  "acceptance": {
+    "sample": {
+      "quantity": { "value": 150, "unit": "episode" },
+      "delivery_days": 28,
+      "paid": true,
+      "evaluation": "manual_review"
+    },
+    "criteria": [
+      {
+        "id": "success",
+        "metric": "task_success_rate",
+        "operator": "gte",
+        "value": 0.85,
+        "measurement": "Episode succeeds if the stated goal condition is met (item at target location; garment folded to demonstrated template) without human physical intervention. Judged by one buyer reviewer per episode on a random sample; 10% double-reviewed for agreement.",
+        "sample_size": 300,
+        "blocking": true
+      },
+      {
+        "id": "sync",
+        "metric": "sync_error_ms",
+        "operator": "lte",
+        "value": 10,
+        "unit": "ms",
+        "measurement": "p99 pairwise timestamp skew across all streams per episode, buyer ingest tool, every episode.",
+        "blocking": true
+      }
+    ]
+  },
+  "metadata": {
+    "required": ["episode_id", "timestamp_utc", "camera_intrinsics", "camera_extrinsics", "robot_model", "joint_names", "environment_id", "outcome_label"],
+    "preferred": ["object_class", "garment_material"]
+  },
+  "licensing": {
+    "commercial_training": true,
+    "commercial_deployment": true,
+    "derivative_models": true,
+    "redistribution": false,
+    "exclusive": false,
+    "provenance_documentation_required": true,
+    "consent_artifacts_required": true,
+    "notes": "Occupied homes: resident consent and location releases required per site."
+  },
+  "delivery": {
+    "deadline": "2027-02-28",
+    "format": { "standard": "lerobot", "version": "2.1" },
+    "transfer": "gcs"
+  },
+  "economics": {
+    "pricing_model": "fixed_budget",
+    "budget": { "min": 300000, "max": 550000, "currency": "USD", "basis": "total" }
+  },
+  "publication": {
+    "visibility": "anonymous",
+    "status": "open",
+    "published_at": "2026-08-18T14:00:00Z",
+    "expires_at": "2026-10-15T23:59:59Z",
+    "publisher": { "type": "anonymous" },
+    "contact": { "method": "via_platform" }
+  },
+  "extensions": {
+    "humanoid": { "hand_type": "underactuated", "fingers_per_hand": 4 }
+  }
+}

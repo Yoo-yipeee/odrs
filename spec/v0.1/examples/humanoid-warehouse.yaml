@@ -1,0 +1,298 @@
+# ODRS v0.1 — worked example
+#
+# Encodes the specification review's final test case:
+#   "100,000 humanoid warehouse pick-and-place episodes with RGB-D and
+#    joint-state data, commercial training rights, minimum 90% success rate,
+#    10ms synchronisation, collected in India, delivered within 90 days."
+#
+# This is an ILLUSTRATIVE EXAMPLE. Example Humanoid Co. is fictional and this
+# document does not represent real market demand. Licensed CC0.
+#
+# Comments below marked [REVIEW] mark places where the original phrasing was
+# ambiguous and ODRS forced it to be made explicit. That forcing is the point.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01JBQZK7X4M9NPRSTVWXYZ2A3B
+
+title: Humanoid warehouse pick-and-place, bimanual, RGB-D + joint state
+
+summary: >
+  Bimanual pick-and-place of mixed warehouse items (cartons, polybags, totes)
+  from conveyor to pallet and from shelf to tote. Intended as fine-tuning data
+  for an existing manipulation policy, not pre-training. Failure cases are
+  wanted, at a bounded rate.
+
+task:
+  category: manipulation
+  type: pick_and_place
+  description: >
+    Grasp, transport and place mixed-SKU warehouse items between conveyor,
+    shelving and pallet. Two-handed handling required for items over 6kg or
+    over 50cm in the longest dimension.
+  # [REVIEW] The original said "90% success rate", which implicitly excluded
+  # failures. Failures are in fact valuable here, so the intent is a floor on
+  # success, not a prohibition on failure. Stating it explicitly:
+  includes_failures: true
+
+embodiment:
+  type: humanoid
+  alternatives: [bimanual_arm, mobile_manipulator]
+  hands: 2
+  degrees_of_freedom: 14
+  # platform deliberately unset: naming one would cut the supplier pool hard,
+  # and retargeting is acceptable for this use.
+
+environment:
+  type: warehouse
+  # [REVIEW] Absent in the original. A working facility and a warehouse-shaped
+  # lab mockup differ by roughly an order of magnitude in cost, and this is the
+  # most common source of a rejected delivery.
+  realism: staged_real
+  description: >
+    Operating third-party logistics facilities during live or simulated shifts.
+    Lab mockups not accepted.
+
+data:
+  quantity:
+    value: 100000
+    unit: episode          # not "trajectory" — see schema note on units
+    minimum: 20000         # a supplier who can only do 20k should still respond
+  episode_duration_seconds:
+    minimum: 8
+    typical: 22
+    maximum: 90
+  quantity_note: >
+    Counted after QA. Rejected takes and setup time do not count toward the
+    total.
+
+modalities:
+  - rgb
+  - depth
+  - joint_state
+  - action
+  - force_torque
+
+capture:
+  method: teleoperation
+
+  # [REVIEW] Entirely absent from the original requirement, and the single most
+  # likely cause of an unusable delivery. Without this, a supplier could ship
+  # joint-velocity commands at 10Hz against an expectation of absolute
+  # end-effector poses at 30Hz, and both parties would believe they had complied.
+  action_space:
+    representation: joint_position
+    reference_frame: robot_base
+    control_frequency_hz: 30
+    notes: >
+      Gripper state as a separate continuous channel in [0,1] per hand.
+
+  sensors:
+    - modality: rgb
+      viewpoint: head
+      count: 1
+      resolution: { minimum_width: 1280, minimum_height: 720 }
+      frequency_hz: 30
+      calibration_required: true
+    - modality: rgb
+      viewpoint: wrist
+      count: 2                       # one per hand
+      resolution: { minimum_width: 640, minimum_height: 480 }
+      frequency_hz: 30
+      calibration_required: true
+    - modality: depth
+      viewpoint: head
+      count: 1
+      resolution: { minimum_width: 640, minimum_height: 480 }
+      frequency_hz: 15
+      calibration_required: true
+      notes: Stereo or active IR both acceptable. Time-of-flight preferred.
+
+  synchronization:
+    maximum_error_ms: 10
+    method: hardware_trigger
+
+# [REVIEW] Absent from the original. 100,000 episodes from one facility with
+# forty SKUs would satisfy every other field in this document and be close to
+# worthless for the stated fine-tuning objective.
+diversity:
+  distinct_environments: { minimum: 6, target: 12 }
+  distinct_scenes:       { minimum: 40 }
+  distinct_objects:      { minimum: 300, target: 800 }
+  distinct_operators:    { minimum: 25 }
+  distinct_embodiment_instances: { minimum: 4 }
+  lighting_conditions:   { minimum: 3 }
+  maximum_share_per_environment: 0.30
+  notes: >
+    Object set must span rigid cartons, deformable polybags and irregular
+    items. Reflective and transparent packaging explicitly wanted.
+
+geography:
+  collection: [IN]
+  usage: [US, DE, JP]
+
+# [REVIEW] The heart of the revision. The original stated "minimum 90% success
+# rate" and "10ms synchronisation" as bare numbers. Neither was actionable:
+# nobody had said who judges success, against what task definition, or over how
+# many episodes.
+acceptance:
+  sample:
+    quantity: { value: 250, unit: episode }
+    delivery_days: 21
+    paid: true
+    evaluation: manual_review
+    notes: >
+      Full order is not committed until the sample passes every blocking
+      criterion below. Sample is paid at the agreed per-episode rate.
+
+  criteria:
+    - id: sync
+      metric: sync_error_ms
+      operator: lte
+      value: 10
+      unit: ms
+      measurement: >
+        Maximum absolute timestamp delta between any two modality streams within
+        a single episode, computed by the buyer's ingest tool over every episode
+        in the batch. Reported as the 99th percentile, not the mean.
+      blocking: true
+
+    - id: success
+      metric: task_success_rate
+      operator: gte
+      value: 0.90
+      measurement: >
+        An episode is successful if the target item ends fully within the
+        destination container with no drop, no collision with shelving, and no
+        operator reset. Judged by two independent human reviewers from the
+        buyer's team on a random sample; disagreements adjudicated by a third.
+        Measured over the whole batch, not per operator or per site.
+      sample_size: 400
+      blocking: true
+
+    - id: failure-share
+      metric: task_success_rate
+      operator: lte
+      value: 0.97
+      measurement: >
+        Same definition as 'success'. Upper bound, not a typo: at least 3% of
+        episodes must be genuine unsuccessful attempts, since recovery
+        behaviour is a training target. Sanitised deliveries will be rejected.
+      sample_size: 400
+      blocking: true
+
+    - id: calibration
+      metric: calibration_reprojection_error_px
+      operator: lte
+      value: 1.5
+      unit: px
+      measurement: >
+        RMS reprojection error from the supplied intrinsics and extrinsics,
+        checked against a target board recorded at the start of each session.
+      blocking: true
+
+    - id: dropped-frames
+      metric: frame_drop_rate
+      operator: lte
+      value: 0.005
+      measurement: >
+        Fraction of expected frames missing per stream, per episode, derived
+        from nominal frequency_hz and episode duration.
+      blocking: false
+
+metadata:
+  required:
+    - episode_id
+    - timestamp_utc
+    - camera_intrinsics
+    - camera_extrinsics
+    - robot_model
+    - joint_names
+    - operator_id_pseudonymous
+    - environment_id
+    - object_class
+    - outcome_label
+  preferred:
+    - object_mass_kg
+    - shift_time_of_day
+    - language_annotation
+  notes: >
+    operator_id must be a stable pseudonym, not a name or employee number.
+    It is needed to verify the distinct_operators requirement without
+    identifying individuals.
+
+licensing:
+  research: true
+  commercial_training: true
+  commercial_deployment: true
+  derivative_models: true
+  redistribution: false
+  exclusive: false
+  term_months: 0                       # perpetual
+  attribution_required: false
+  # [REVIEW] Added. Buyer deploys into the EU, so provenance documentation is
+  # a hard requirement rather than a nice-to-have, and it must be contracted
+  # before collection rather than requested afterwards.
+  provenance_documentation_required: true
+  consent_artifacts_required: true
+  notes: >
+    Worker consent for recording, and site releases from each facility, must be
+    delivered alongside the data. ODRS expresses this requirement only; the
+    parties' contract governs.
+
+delivery:
+  deadline: "2026-11-18"
+  milestones:
+    - name: Sample
+      date: "2026-09-10"
+      quantity: 250
+    - name: First production batch
+      date: "2026-10-07"
+      quantity: 30000
+    - name: Final
+      date: "2026-11-18"
+      quantity: 100000
+  # [REVIEW] Added. Turns "send me the data" into something a supplier can
+  # actually build a pipeline against, and keeps ODRS complementary to the
+  # dataset-format standards rather than duplicating them.
+  format:
+    standard: lerobot
+    version: "2.1"
+    notes: One episode per LeRobotDataset episode. Depth as uint16 millimetres.
+  transfer: s3
+
+economics:
+  pricing_model: fixed_budget
+  budget:
+    min: 250000
+    max: 400000
+    currency: USD
+    # [REVIEW] Added, and it changes the request materially. The original
+    # example implied roughly $2/episode all-in, which is well below observed
+    # rates for multi-camera humanoid teleoperation even at Indian operator
+    # costs. Stating the basis makes the arithmetic visible to both sides
+    # before anyone commits.
+    basis: total
+  # Equivalent per-unit view, for comparability:
+  #   $2.50–4.00 per episode at 100,000 episodes.
+
+publication:
+  visibility: anonymous
+  status: open
+  published_at: "2026-08-20T09:00:00Z"
+  expires_at: "2026-09-30T23:59:59Z"
+  publisher:
+    type: organization
+    name: Example Humanoid Co.
+  contact:
+    method: email
+    value: data-sourcing@example.invalid
+
+extensions:
+  humanoid:
+    hand_type: dexterous
+    fingers_per_hand: 5
+    payload_kg: 12
+  procurement:
+    reference: EHC-2026-DS-114
+    approval_required_above_usd: 300000

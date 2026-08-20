@@ -1,0 +1,115 @@
+# ODRS v0.1 example — autonomous-vehicle edge-case perception data.
+# Observational capture: the vehicle is instrumented but the interesting
+# content is what happens around it. Illustrative example; Example AV Corp.
+# is fictional. Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01M0E7XW9HYSQNPC1VH7H6M7NB
+
+title: Rare-event driving scenes, adverse weather, unprotected road users
+
+task:
+  category: driving
+  type: edge_case_perception
+  description: >
+    Multi-sensor driving logs biased toward rare events: jaywalking near
+    occlusions, animals on carriageway, emergency vehicles, debris, heavy
+    rain and fog, low-sun glare. Ordinary highway miles are explicitly
+    capped, not wanted in volume.
+  includes_failures: false
+
+embodiment:
+  type: autonomous_vehicle
+
+environment:
+  type: road
+  realism: in_the_wild
+
+data:
+  quantity: { value: 50000, unit: scene }
+  quantity_note: >
+    A scene is a 20-second window centred on a tagged event, per the schema
+    definition of 'scene' as a distinct setup; the tagged event defines the
+    scene. Untagged driving does not count.
+
+modalities: [rgb, lidar, imu]
+
+capture:
+  method: fixed_camera_observation
+  sensors:
+    - modality: rgb
+      viewpoint: scene_fixed
+      count: 6
+      resolution: { minimum_width: 1920, minimum_height: 1080 }
+      frequency_hz: 30
+      calibration_required: true
+    - modality: lidar
+      viewpoint: scene_fixed
+      count: 1
+      frequency_hz: 10
+      calibration_required: true
+  synchronization: { maximum_error_ms: 10, method: ptp }
+
+diversity:
+  distinct_environments: { minimum: 40 }     # distinct routes/areas
+  lighting_conditions: { minimum: 5 }
+  maximum_share_per_environment: 0.05
+  notes: >
+    Event-class balance required: no single event class above 20% of scenes;
+    adverse weather at least 30%.
+
+geography:
+  collection: [US, CA, GB, DE, JP]
+  usage: [US, EU, JP]
+
+acceptance:
+  sample:
+    quantity: { value: 500, unit: scene }
+    delivery_days: 30
+    paid: true
+    evaluation: manual_review
+  criteria:
+    - id: event-precision
+      metric: event_tag_precision
+      operator: gte
+      value: 0.9
+      measurement: >
+        Custom metric: fraction of delivered scenes whose event tag is
+        confirmed correct by buyer review on a random 1,000-scene audit.
+        A scene with no genuine event is a precision failure.
+      sample_size: 1000
+      blocking: true
+    - metric: calibration_reprojection_error_px
+      operator: lte
+      value: 2.0
+      unit: px
+      measurement: RMS on the supplied target-board recordings per vehicle per week of collection.
+      blocking: true
+
+metadata:
+  required: [scene_id, timestamp_utc, sensor_models, calibration_set_id, event_class, weather_class, country]
+  notes: Plates and faces blurred at source; blurring pipeline documented.
+
+licensing:
+  commercial_training: true
+  commercial_deployment: true
+  redistribution: false
+  exclusive: false
+  provenance_documentation_required: true
+
+delivery:
+  deadline: "2027-05-31"
+  format: { standard: webdataset }
+  transfer: s3
+
+economics:
+  pricing_model: fixed_budget
+  budget: { min: 14, max: 25, currency: USD, basis: per_unit, unit: scene }
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-01T12:00:00Z"
+  publisher: { type: organization, name: Example AV Corp. }
+  contact: { method: email, value: data-sourcing@example.invalid }

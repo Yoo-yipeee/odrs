@@ -1,0 +1,125 @@
+# ODRS v0.1 example — industrial assembly with named platform and milestones.
+# Illustrative example; Example Automation GmbH is fictional. Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01M0E7XW9RZ6FG3KJWGGHDSYWZ
+
+title: Bimanual wire-harness routing and connector insertion
+
+summary: >
+  Fine-motor bimanual assembly on automotive wire harnesses: routing through
+  clips, connector mating with tactile confirmation, cable-tie placement.
+  High-precision, contact-rich, deformable-linear-object manipulation.
+
+task:
+  category: assembly
+  type: wire_harness_routing
+  includes_failures: true
+
+embodiment:
+  type: bimanual_arm
+  platform: ABB YuMi IRB 14000
+  hands: 2
+  degrees_of_freedom: 14
+
+environment:
+  type: factory
+  realism: staged_real
+  description: >
+    Production-representative fixtures on a live factory floor or supplier
+    training cell built from production tooling. Desktop mockups rejected.
+
+data:
+  quantity: { value: 15000, unit: episode, minimum: 3000 }
+  episode_duration_seconds: { minimum: 30, typical: 90, maximum: 240 }
+
+modalities: [rgb, depth, joint_state, action, force_torque]
+
+capture:
+  method: teleoperation
+  action_space:
+    representation: ee_pose_absolute
+    reference_frame: robot_base
+    control_frequency_hz: 250
+    notes: Per-arm EE pose plus gripper aperture; wrench streams recorded per arm.
+  sensors:
+    - modality: rgb
+      viewpoint: overhead
+      count: 2
+      resolution: { minimum_width: 1920, minimum_height: 1080 }
+      frequency_hz: 30
+      calibration_required: true
+    - modality: rgb
+      viewpoint: wrist
+      count: 2
+      frequency_hz: 30
+      calibration_required: true
+    - modality: force_torque
+      viewpoint: other
+      count: 2
+      frequency_hz: 1000
+  synchronization: { maximum_error_ms: 4, method: ptp }
+
+diversity:
+  distinct_scenes: { minimum: 10 }       # harness variants
+  distinct_objects: { minimum: 40 }      # connector types
+  distinct_operators: { minimum: 12 }
+
+geography:
+  collection: [DE, CZ, PL]
+  usage: [DE, US]
+
+acceptance:
+  sample:
+    quantity: { value: 100, unit: episode }
+    delivery_days: 21
+    paid: true
+    evaluation: policy_evaluation
+    notes: >
+      Buyer fine-tunes its current policy on the sample and requires
+      no regression on its internal insertion benchmark before scale-up.
+  criteria:
+    - metric: task_success_rate
+      operator: gte
+      value: 0.92
+      measurement: >
+        Success = connector fully seated (audible/tactile click captured in
+        F/T trace) and harness routed through all clips, verified by supplier
+        QA against the routing diagram and audited by buyer on 15% of
+        episodes.
+      sample_size: 600
+      blocking: true
+    - metric: sync_error_ms
+      operator: lte
+      value: 4
+      unit: ms
+      measurement: p99 across all stream pairs per episode, buyer ingest, all episodes.
+      blocking: true
+
+licensing:
+  commercial_training: true
+  commercial_deployment: true
+  redistribution: false
+  exclusive: false
+  provenance_documentation_required: true
+
+delivery:
+  deadline: "2027-01-31"
+  milestones:
+    - { name: Sample,      date: "2026-09-30", quantity: 100 }
+    - { name: Batch 1,     date: "2026-11-15", quantity: 6000 }
+    - { name: Final,       date: "2027-01-31", quantity: 15000 }
+  format: { standard: mcap }
+  transfer: azure_blob
+
+economics:
+  pricing_model: fixed_budget
+  budget: { min: 12, max: 20, currency: EUR, basis: per_unit, unit: episode }
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-05T08:00:00Z"
+  publisher: { type: organization, name: Example Automation GmbH }
+  contact: { method: email, value: ai-data@example.invalid }

@@ -1,0 +1,547 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odrs.org/spec/v0.1/data-request.schema.json",
+  "title": "ODRS Data Request",
+  "description": "An open, machine-readable expression of a Physical AI data requirement: what data is needed, captured how, meeting what criteria, under what rights. ODRS describes the ask. It does not describe delivered datasets (see delivery.format for handing off to LeRobot, RLDS and similar), and it does not create a legal agreement.",
+  "type": "object",
+  "required": ["odrs_version", "type", "task", "data"],
+  "additionalProperties": true,
+
+  "properties": {
+
+    "odrs_version": {
+      "type": "string",
+      "pattern": "^0\\.1(\\.[0-9]+)?$",
+      "description": "Specification version this document conforms to. REQUIRED. Pre-1.0 minor versions may break; pin it."
+    },
+
+    "type": {
+      "const": "data_request",
+      "description": "Object discriminator. REQUIRED. Future ODRS objects use capability, offer, dataset, attestation."
+    },
+
+    "id": {
+      "type": "string",
+      "pattern": "^dr_[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Globally unique identifier: 'dr_' + Crockford-base32 ULID. OPTIONAL at authoring time so a draft can live in a repository without minting an ID; REQUIRED once published to any registry. Note: ULIDs embed a creation timestamp, which discloses drafting time even on anonymous requests. Use a UUIDv4-backed identifier where that matters."
+    },
+
+    "title": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Short human-readable label. Not machine-interpreted."
+    },
+
+    "summary": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Prose description of the requirement. Complements the structured fields; never replaces them."
+    },
+
+    "task": {
+      "type": "object",
+      "description": "What activity the data must capture. REQUIRED.",
+      "required": ["category"],
+      "additionalProperties": true,
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "manipulation", "navigation", "locomotion", "assembly", "inspection",
+            "grasping", "human_demonstration", "household", "warehouse",
+            "industrial", "agriculture", "healthcare", "driving",
+            "social_interaction", "other"
+          ],
+          "description": "Coarse task family from the ODRS controlled vocabulary. Use 'other' plus task.taxonomy rather than stretching a category to fit."
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Finer-grained task, free text (e.g. 'pick_and_place', 'wire_harness_routing'). Deliberately not enumerated: the space is open-ended and a closed list would be wrong within months."
+        },
+        "description": { "type": "string", "maxLength": 4000 },
+        "includes_failures": {
+          "type": "boolean",
+          "description": "Whether unsuccessful attempts are wanted. Default false. Set true when failure modes are the training target. This case is common and is one reason ODRS has no global success-rate field."
+        },
+        "taxonomy": { "$ref": "#/$defs/taxonomyRef" }
+      }
+    },
+
+    "embodiment": {
+      "type": "object",
+      "description": "The physical system performing the task. OPTIONAL: human demonstration and egocentric capture have no robot embodiment, and making this field mandatory would render the fastest-growing data category inexpressible.",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "humanoid", "robotic_arm", "bimanual_arm", "mobile_robot",
+            "mobile_manipulator", "quadruped", "drone", "autonomous_vehicle",
+            "exoskeleton", "human", "none", "other"
+          ],
+          "description": "'human' = a person performs the task and is instrumented (egocentric rigs, motion capture, gloves). 'none' = no actor is instrumented; the data is observational."
+        },
+        "alternatives": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Other acceptable embodiment types, in descending order of preference."
+        },
+        "platform": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Specific hardware if it matters (e.g. 'Franka Research 3', 'Unitree G1'). Naming a platform narrows the supplier pool sharply. State it only if genuinely required."
+        },
+        "hands": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "degrees_of_freedom": { "type": "integer", "minimum": 0 },
+        "taxonomy": { "$ref": "#/$defs/taxonomyRef" }
+      }
+    },
+
+    "environment": {
+      "type": "object",
+      "description": "Where collection takes place.",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "home", "kitchen", "office", "warehouse", "factory", "laboratory",
+            "hospital", "farm", "road", "retail", "construction", "outdoor",
+            "other"
+          ]
+        },
+        "realism": {
+          "type": "string",
+          "enum": ["in_the_wild", "staged_real", "lab_mockup", "simulation"],
+          "description": "Distinguishes an actual working warehouse from a warehouse-like set from a lab bench. This axis drives much of the price difference between otherwise identical requests, and buyers routinely leave it implicit and then reject the delivery."
+        },
+        "description": { "type": "string", "maxLength": 2000 },
+        "taxonomy": { "$ref": "#/$defs/taxonomyRef" }
+      }
+    },
+
+    "data": {
+      "type": "object",
+      "description": "How much data is wanted. REQUIRED.",
+      "required": ["quantity"],
+      "additionalProperties": true,
+      "properties": {
+        "quantity": {
+          "type": "object",
+          "required": ["value", "unit"],
+          "additionalProperties": false,
+          "properties": {
+            "value": { "type": "number", "exclusiveMinimum": 0 },
+            "unit": {
+              "type": "string",
+              "enum": ["episode", "demonstration", "hour", "frame", "scene", "interaction", "sample"],
+              "description": "ODRS defines these precisely because near-synonyms destroy comparability. episode = one continuous recorded attempt from reset to termination, regardless of outcome. demonstration = an episode judged successful and intended as an imitation target; every demonstration is an episode, not every episode is a demonstration. hour = wall-clock duration of usable recorded data after QA, excluding setup and rejected takes. frame = a single synchronized multi-sensor sample. scene = a distinct physical setup. interaction = one contact-bearing exchange with an object or person. sample = escape hatch; if used, define it in data.quantity_note. NOTE: 'trajectory' is deliberately absent, having been ambiguous between container and modality. Encode it as 'episode'."
+            },
+            "minimum": {
+              "type": "number",
+              "description": "Smallest quantity worth transacting. Lets a supplier respond partially instead of declining outright."
+            }
+          }
+        },
+        "quantity_note": { "type": "string", "maxLength": 1000 },
+        "episode_duration_seconds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minimum": { "type": "number", "exclusiveMinimum": 0 },
+            "maximum": { "type": "number", "exclusiveMinimum": 0 },
+            "typical": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "description": "Without this, '100,000 episodes' is unpriceable: it spans two orders of magnitude of collection effort."
+        }
+      }
+    },
+
+    "modalities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "rgb", "depth", "rgbd", "lidar", "thermal", "event_camera", "audio",
+          "tactile", "force_torque", "imu", "joint_state", "action", "pose",
+          "hand_pose", "body_pose", "eye_gaze", "language_annotation", "text"
+        ]
+      },
+      "description": "Signals that must be present. This is the lightweight form. For sensor detail use capture.sensors; where both are present they MUST be consistent and capture.sensors is authoritative. NOTE: 'trajectory' and 'teleoperation' are deliberately absent. The first is a container (see data.quantity.unit) and the second is a collection method (see capture.method); neither is a signal."
+    },
+
+    "capture": {
+      "type": "object",
+      "description": "How the data is produced. The fields here, action space above all, determine whether delivered data is usable at all. Two requests identical in every other respect can yield mutually incompatible datasets if these differ.",
+      "additionalProperties": true,
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": [
+            "teleoperation", "kinesthetic_teaching", "scripted_policy",
+            "autonomous_policy", "human_wearable", "fixed_camera_observation",
+            "motion_capture", "simulation", "mixed", "other"
+          ]
+        },
+        "action_space": {
+          "type": "object",
+          "description": "The control representation recorded alongside observations. Omitting this is the most common cause of a delivered dataset being unusable in the buyer's stack.",
+          "additionalProperties": false,
+          "properties": {
+            "representation": {
+              "type": "string",
+              "enum": [
+                "joint_position", "joint_velocity", "joint_torque",
+                "ee_pose_absolute", "ee_pose_delta", "ee_twist",
+                "base_velocity", "gripper_continuous", "gripper_binary", "none"
+              ]
+            },
+            "reference_frame": {
+              "type": "string",
+              "enum": ["robot_base", "world", "camera", "tool", "other"]
+            },
+            "control_frequency_hz": { "type": "number", "exclusiveMinimum": 0 },
+            "notes": { "type": "string", "maxLength": 1000 }
+          }
+        },
+        "sensors": {
+          "type": "array",
+          "description": "Per-sensor requirements. Viewpoint is the highest-variance factor in manipulation datasets and the most frequently omitted.",
+          "items": {
+            "type": "object",
+            "required": ["modality"],
+            "additionalProperties": true,
+            "properties": {
+              "modality": { "type": "string" },
+              "viewpoint": {
+                "type": "string",
+                "enum": ["wrist", "head", "chest", "egocentric", "third_person", "overhead", "scene_fixed", "in_hand", "other"]
+              },
+              "count": { "type": "integer", "minimum": 1 },
+              "resolution": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "width": { "type": "integer", "minimum": 1 },
+                  "height": { "type": "integer", "minimum": 1 },
+                  "minimum_width": { "type": "integer", "minimum": 1 },
+                  "minimum_height": { "type": "integer", "minimum": 1 }
+                }
+              },
+              "frequency_hz": { "type": "number", "exclusiveMinimum": 0 },
+              "calibration_required": {
+                "type": "boolean",
+                "description": "Whether intrinsics and extrinsics must ship with the data."
+              },
+              "notes": { "type": "string", "maxLength": 1000 }
+            }
+          }
+        },
+        "synchronization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maximum_error_ms": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Maximum permitted timestamp skew between any two modalities within one episode. Verified under acceptance.criteria rather than merely asserted here."
+            },
+            "method": {
+              "type": "string",
+              "enum": ["hardware_trigger", "ptp", "ntp", "software_timestamp", "post_hoc_alignment", "other"]
+            }
+          }
+        }
+      }
+    },
+
+    "diversity": {
+      "type": "object",
+      "description": "Coverage requirements. For most Physical AI training objectives these constrain usefulness more tightly than raw quantity does: 100,000 episodes from one scene with one object is worth less than 10,000 across 500 homes. Quantity specified without diversity is a common and expensive specification error.",
+      "additionalProperties": true,
+      "properties": {
+        "distinct_environments": { "$ref": "#/$defs/minimumCount" },
+        "distinct_scenes":       { "$ref": "#/$defs/minimumCount" },
+        "distinct_objects":      { "$ref": "#/$defs/minimumCount" },
+        "distinct_operators":    { "$ref": "#/$defs/minimumCount" },
+        "distinct_embodiment_instances": { "$ref": "#/$defs/minimumCount" },
+        "lighting_conditions":   { "$ref": "#/$defs/minimumCount" },
+        "maximum_share_per_environment": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "description": "Cap on the fraction of the corpus originating in any one environment. Prevents a nominally diverse delivery that is 80 percent one room."
+        },
+        "notes": { "type": "string", "maxLength": 2000 }
+      }
+    },
+
+    "geography": {
+      "type": "object",
+      "description": "ISO 3166-1 alpha-2 codes. Collection and usage are separated deliberately: they carry different legal consequences, and conflating them is what makes cross-border data rights unauditable.",
+      "additionalProperties": false,
+      "properties": {
+        "collection": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/countryCode" },
+          "description": "Where data may be captured. Country granularity only. Finer location is a privacy risk and belongs in per-delivery metadata, not a published request."
+        },
+        "collection_excluded": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/countryCode" }
+        },
+        "usage": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/countryCode" },
+          "description": "Where the buyer intends to train on or deploy from the data. Determines which consent and transfer regimes apply."
+        }
+      }
+    },
+
+    "acceptance": {
+      "type": "object",
+      "description": "How delivered data is judged. This is the operative section: a threshold with no stated measurement method is a wish rather than a requirement, and is the usual root cause of delivery disputes. Procurement in this market is typically sample-gated, so the sample block is where most requests should start.",
+      "additionalProperties": true,
+      "properties": {
+        "sample": {
+          "type": "object",
+          "description": "A small first batch, evaluated before the full order is committed.",
+          "additionalProperties": true,
+          "properties": {
+            "quantity": {
+              "type": "object",
+              "required": ["value", "unit"],
+              "properties": {
+                "value": { "type": "number", "exclusiveMinimum": 0 },
+                "unit": { "type": "string" }
+              }
+            },
+            "delivery_days": { "type": "integer", "minimum": 1 },
+            "paid": { "type": "boolean" },
+            "evaluation": {
+              "type": "string",
+              "enum": ["manual_review", "automated_check", "policy_evaluation", "replay_validation", "third_party_audit", "other"]
+            },
+            "notes": { "type": "string", "maxLength": 2000 }
+          }
+        },
+        "criteria": {
+          "type": "array",
+          "description": "Testable conditions. Each MUST state how it is measured.",
+          "items": {
+            "type": "object",
+            "required": ["metric", "operator", "value", "measurement"],
+            "additionalProperties": true,
+            "properties": {
+              "id": { "type": "string", "maxLength": 64 },
+              "metric": {
+                "type": "string",
+                "description": "Well-known values, each defined in the specification: sync_error_ms, task_success_rate, frame_drop_rate, annotation_agreement, calibration_reprojection_error_px, missing_metadata_rate, duplicate_rate, corrupt_episode_rate. Other values are permitted and MUST be defined in 'measurement'."
+              },
+              "operator": {
+                "type": "string",
+                "enum": ["lte", "lt", "gte", "gt", "eq", "neq", "in"]
+              },
+              "value": {
+                "description": "Number, string, or array depending on operator."
+              },
+              "unit": { "type": "string", "maxLength": 40 },
+              "measurement": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "description": "REQUIRED. Who or what evaluates this, against what definition, over what population. 'task_success_rate >= 0.9' is meaningless until this states whether success is judged by the teleoperator, a reviewer, or a trained policy, and against which task definition. This field is why ODRS has no top-level success_rate: the number was never the hard part."
+              },
+              "sample_size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Episodes evaluated to decide the criterion. Without it, a 90 percent threshold checked on 10 episodes and on 10,000 are different requirements."
+              },
+              "blocking": {
+                "type": "boolean",
+                "description": "True means failing this rejects the delivery; false means advisory. Default true."
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "description": "Per-episode metadata that must accompany the data.",
+      "additionalProperties": true,
+      "properties": {
+        "required":  { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "preferred": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "notes": { "type": "string", "maxLength": 2000 }
+      }
+    },
+
+    "licensing": {
+      "type": "object",
+      "description": "Rights the buyer requires. ODRS structures the requirement; it does not grant rights, form a contract, or constitute legal advice.",
+      "additionalProperties": true,
+      "properties": {
+        "research":              { "type": "boolean" },
+        "commercial_training":   { "type": "boolean" },
+        "commercial_deployment": { "type": "boolean" },
+        "derivative_models":     { "type": "boolean", "description": "Right to distribute models trained on the data." },
+        "redistribution":        { "type": "boolean" },
+        "exclusive":             { "type": "boolean" },
+        "exclusivity_months":    { "type": "integer", "minimum": 0 },
+        "term_months":           { "type": "integer", "minimum": 0, "description": "Omit for perpetual." },
+        "attribution_required":  { "type": "boolean" },
+        "provenance_documentation_required": {
+          "type": "boolean",
+          "description": "Requires documented origin, collection conditions, and annotation methodology. Buyers subject to EU AI Act high-risk obligations generally need this, and asking for it after delivery is too late."
+        },
+        "consent_artifacts_required": {
+          "type": "boolean",
+          "description": "Requires participant consent records and location releases for identifiable people or private premises. Applies to most egocentric and in-home capture."
+        },
+        "notes": { "type": "string", "maxLength": 2000 }
+      }
+    },
+
+    "delivery": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "deadline": { "type": "string", "format": "date" },
+        "milestones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["date"],
+            "properties": {
+              "name": { "type": "string", "maxLength": 120 },
+              "date": { "type": "string", "format": "date" },
+              "quantity": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        },
+        "format": {
+          "type": "object",
+          "description": "Target dataset format. ODRS specifies the request; existing standards specify the delivery. Naming one here removes the most common source of post-delivery rework, and keeps ODRS complementary to LeRobot, RLDS and ISO 26264 rather than competing with them.",
+          "additionalProperties": false,
+          "properties": {
+            "standard": {
+              "type": "string",
+              "enum": ["lerobot", "rlds", "hdf5", "mcap", "rosbag2", "webdataset", "parquet", "custom", "unspecified"]
+            },
+            "version": { "type": "string", "maxLength": 40 },
+            "notes":   { "type": "string", "maxLength": 1000 }
+          }
+        },
+        "transfer": {
+          "type": "string",
+          "enum": ["s3", "gcs", "azure_blob", "https", "sftp", "physical_media", "other"]
+        }
+      }
+    },
+
+    "economics": {
+      "type": "object",
+      "description": "Budget is OPTIONAL throughout. Many buyers will not disclose one, and a specification that forces disclosure will simply be ignored by them.",
+      "additionalProperties": true,
+      "properties": {
+        "pricing_model": {
+          "type": "string",
+          "enum": ["fixed_budget", "price_discovery", "market_rate", "undisclosed"]
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "dependentRequired": { "min": ["basis"], "max": ["basis"] },
+          "properties": {
+            "min":      { "type": "number", "minimum": 0 },
+            "max":      { "type": "number", "minimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217." },
+            "basis": {
+              "type": "string",
+              "enum": ["total", "per_unit"],
+              "description": "REQUIRED whenever a budget figure is present. A range with no basis is not comparable across requests, and comparability is the entire point of structuring this field."
+            },
+            "unit": { "type": "string", "description": "Required when basis is per_unit; SHOULD match data.quantity.unit." }
+          }
+        }
+      }
+    },
+
+    "publication": {
+      "type": "object",
+      "description": "Registry and lifecycle state. Separated from the request body because these are facts about a listing rather than about the data being requested: the same requirement published in two places has one set of semantics and two publication states.",
+      "additionalProperties": true,
+      "properties": {
+        "visibility": {
+          "type": "string",
+          "enum": ["public", "anonymous", "private"],
+          "description": "anonymous = requirements and budget visible, publisher identity withheld. ODRS carries no identity infrastructure; a platform stores identity separately."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "open", "partially_fulfilled", "fulfilled", "closed", "cancelled"]
+        },
+        "published_at": { "type": "string", "format": "date-time" },
+        "expires_at":   { "type": "string", "format": "date-time" },
+        "publisher": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "type": { "type": "string", "enum": ["organization", "individual", "consortium", "anonymous"] },
+            "name": { "type": "string", "maxLength": 200 },
+            "id":   { "type": "string", "maxLength": 120 },
+            "url":  { "type": "string", "format": "uri" }
+          }
+        },
+        "contact": {
+          "type": "object",
+          "description": "How a supplier responds. A request published to a repository with no return path is a broadcast into a void.",
+          "additionalProperties": false,
+          "properties": {
+            "method": { "type": "string", "enum": ["email", "url", "via_platform", "none"] },
+            "value":  { "type": "string", "maxLength": 400 }
+          }
+        }
+      }
+    },
+
+    "extensions": {
+      "type": "object",
+      "description": "Namespaced domain-specific fields. The core stays small; specialization lives here. Namespaces are lowercase identifiers, or reverse-DNS for third parties (e.g. 'tactile', 'com.example.procurement'). Consumers MUST ignore namespaces they do not recognize and MUST preserve them on re-emission.",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$" },
+      "additionalProperties": { "type": "object" }
+    }
+  },
+
+  "$defs": {
+    "countryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "ISO 3166-1 alpha-2."
+    },
+    "minimumCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minimum": { "type": "integer", "minimum": 1 },
+        "target":  { "type": "integer", "minimum": 1 }
+      }
+    },
+    "taxonomyRef": {
+      "type": "object",
+      "description": "Reference to an external vocabulary. ODRS defines structure and a small core vocabulary; it does not attempt to own every robotics taxonomy.",
+      "required": ["namespace", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "namespace": { "type": "string", "maxLength": 200 },
+        "value":     { "type": "string", "maxLength": 400 },
+        "version":   { "type": "string", "maxLength": 40 }
+      }
+    }
+  }
+}

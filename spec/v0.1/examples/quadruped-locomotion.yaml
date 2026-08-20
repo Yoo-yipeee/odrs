@@ -1,0 +1,103 @@
+# ODRS v0.1 example — quadruped locomotion on rough terrain.
+# Illustrative example; Example Field Robotics Oy is fictional. Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01M0E7XW9YF011SKD707S9HYG4
+
+title: Quadruped rough-terrain locomotion with proprioceptive logs
+
+task:
+  category: locomotion
+  type: rough_terrain_traversal
+  description: >
+    Walking, trotting and recovery behaviours over gravel, roots, snow, mud
+    and stairs. Stumbles and falls with recovery attempts are explicitly
+    wanted; terrain difficulty must be labelled per segment.
+  includes_failures: true
+
+embodiment:
+  type: quadruped
+  degrees_of_freedom: 12
+
+environment:
+  type: outdoor
+  realism: in_the_wild
+
+data:
+  quantity: { value: 1200, unit: hour, minimum: 200 }
+
+modalities: [rgb, depth, imu, joint_state, action]
+
+capture:
+  method: teleoperation
+  action_space:
+    representation: joint_position
+    reference_frame: robot_base
+    control_frequency_hz: 400
+    notes: Low-level joint targets, not high-level velocity commands.
+  sensors:
+    - modality: imu
+      viewpoint: other
+      frequency_hz: 400
+    - modality: rgb
+      viewpoint: head
+      count: 1
+      frequency_hz: 30
+      calibration_required: true
+  synchronization: { maximum_error_ms: 3, method: hardware_trigger }
+
+diversity:
+  distinct_environments: { minimum: 15 }
+  distinct_embodiment_instances: { minimum: 3 }
+  lighting_conditions: { minimum: 4 }
+  notes: At least 5 terrain classes; winter conditions at least 15% of hours.
+
+geography:
+  collection: [FI, NO, CH]
+  usage: [FI, US]
+
+acceptance:
+  sample:
+    quantity: { value: 20, unit: hour }
+    delivery_days: 21
+    paid: true
+    evaluation: automated_check
+  criteria:
+    - metric: sync_error_ms
+      operator: lte
+      value: 3
+      unit: ms
+      measurement: p99 IMU-to-joint-state skew per session, buyer tooling, all sessions.
+      blocking: true
+    - metric: corrupt_episode_rate
+      operator: lte
+      value: 0.002
+      measurement: >
+        Fraction of sessions failing structural read in the delivered format,
+        buyer ingest over full delivery.
+      blocking: true
+
+licensing:
+  research: true
+  commercial_training: true
+  commercial_deployment: false
+  redistribution: false
+  exclusive: false
+  term_months: 36
+  notes: Training rights only; deployment rights to be negotiated separately.
+
+delivery:
+  deadline: "2027-06-30"
+  format: { standard: mcap }
+  transfer: https
+
+economics:
+  pricing_model: price_discovery
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-15T06:00:00Z"
+  publisher: { type: organization, name: Example Field Robotics Oy }
+  contact: { method: email, value: data@example.invalid }

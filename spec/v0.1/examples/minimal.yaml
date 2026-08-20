@@ -1,0 +1,17 @@
+# ODRS v0.1 example — the smallest valid data request.
+#
+# Four fields. Everything else is optional, and the validator will warn about
+# the omissions that matter. A request this bare is expressible but not
+# answerable; it exists to document the floor, not to recommend it.
+# Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+
+task:
+  category: manipulation
+
+data:
+  quantity:
+    value: 500
+    unit: episode

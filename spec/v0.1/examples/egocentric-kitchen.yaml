@@ -1,0 +1,152 @@
+# ODRS v0.1 example — human demonstration data, no robot embodiment.
+#
+# This case is the reason 'embodiment' is optional in ODRS: egocentric human
+# capture is one of the largest data categories in Physical AI and has no
+# robot in it. Illustrative example; Example Embodied AI Ltd. is fictional.
+# Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01JBQZM8Y5N0PQRSTVWXYZ3C4D
+
+title: Egocentric human food-preparation demonstrations, real home kitchens
+
+summary: >
+  First-person video of everyday cooking tasks in real residential kitchens,
+  for pre-training a manipulation world model. Human hands only, no robots.
+  Diversity across households matters more than volume.
+
+task:
+  category: human_demonstration
+  type: kitchen_food_preparation
+  description: >
+    Everyday cooking: chopping, pouring, stirring, opening containers and
+    appliances, plating, cleaning as-you-go. Natural behaviour, not staged
+    single-action clips.
+  includes_failures: true
+
+embodiment:
+  type: human
+
+environment:
+  type: kitchen
+  realism: in_the_wild
+  description: >
+    Participants' own homes. Studio kitchens and rented sets are not accepted;
+    the clutter and wear of lived-in spaces is part of the requirement.
+
+data:
+  quantity:
+    value: 3000
+    unit: hour
+    minimum: 500
+  quantity_note: Usable footage after QA; setup and idle time excluded.
+
+modalities:
+  - rgb
+  - depth
+  - hand_pose
+  - eye_gaze
+  - audio
+
+capture:
+  method: human_wearable
+  sensors:
+    - modality: rgb
+      viewpoint: egocentric
+      count: 1
+      resolution: { minimum_width: 1920, minimum_height: 1080 }
+      frequency_hz: 30
+      calibration_required: true
+    - modality: depth
+      viewpoint: egocentric
+      count: 1
+      frequency_hz: 15
+      calibration_required: true
+    - modality: eye_gaze
+      viewpoint: egocentric
+      frequency_hz: 60
+  synchronization:
+    maximum_error_ms: 20
+    method: hardware_trigger
+
+diversity:
+  distinct_environments: { minimum: 300, target: 600 }   # households
+  distinct_operators:    { minimum: 300 }                # one per household ok
+  distinct_objects:      { minimum: 1000 }
+  lighting_conditions:   { minimum: 3 }
+  maximum_share_per_environment: 0.02
+  notes: >
+    Household diversity is the point of this request. Age range 18-75,
+    left- and right-handed participants, varied cuisines.
+
+geography:
+  collection: [US, DE, JP, IN, BR]
+  usage: [US, EU]
+
+acceptance:
+  sample:
+    quantity: { value: 40, unit: hour }
+    delivery_days: 30
+    paid: true
+    evaluation: manual_review
+  criteria:
+    - metric: sync_error_ms
+      operator: lte
+      value: 20
+      unit: ms
+      measurement: >
+        p99 timestamp skew between RGB and gaze streams, computed by buyer
+        ingest over all delivered sessions.
+      blocking: true
+    - metric: missing_metadata_rate
+      operator: lte
+      value: 0.01
+      measurement: >
+        Fraction of sessions missing any field in metadata.required, computed
+        over the full delivery.
+      blocking: true
+
+metadata:
+  required:
+    - session_id
+    - timestamp_utc
+    - camera_intrinsics
+    - participant_id_pseudonymous
+    - household_id_pseudonymous
+    - country
+  preferred:
+    - activity_label
+    - handedness
+
+licensing:
+  research: true
+  commercial_training: true
+  commercial_deployment: true
+  derivative_models: true
+  redistribution: false
+  exclusive: false
+  provenance_documentation_required: true
+  consent_artifacts_required: true
+  notes: >
+    In-home recording of identifiable people: signed participant consent
+    naming AI training as the use, plus bystander-handling procedure, must be
+    delivered with the data. GDPR applies to EU households.
+
+delivery:
+  deadline: "2027-03-31"
+  format: { standard: webdataset }
+  transfer: s3
+
+economics:
+  pricing_model: price_discovery
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-20T09:00:00Z"
+  publisher:
+    type: organization
+    name: Example Embodied AI Ltd.
+    url: https://example.invalid
+  contact: { method: url, value: "https://example.invalid/data-requests" }

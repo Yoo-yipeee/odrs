@@ -1,0 +1,132 @@
+# ODRS v0.1 example — a consortium buyer pooling demand.
+#
+# Demonstrates publisher.type: consortium — several buyers aggregating a
+# commodity pre-training requirement into one request large enough to justify
+# a dedicated collection operation. Illustrative; all organizations fictional.
+# Licensed CC0.
+
+odrs_version: "0.1"
+type: data_request
+id: dr_01M0E7XWA0JKHG8VAAZ3R2H4PF
+
+title: Pooled pre-training corpus, bimanual tabletop manipulation
+
+summary: >
+  Four buyers pooling a generic bimanual manipulation requirement. The corpus
+  is deliberately commodity: broad task coverage, non-exclusive licensing to
+  every consortium member, no buyer-specific tasks. Members differentiate on
+  their own fine-tuning data, not on this corpus.
+
+task:
+  category: manipulation
+  type: bimanual_tabletop_general
+  description: >
+    Broad coverage of two-handed tabletop skills: handovers between hands,
+    bimanual re-grasping, holding-while-operating (jar opening, bottle caps),
+    tool use with stabilizing hand.
+  includes_failures: true
+
+embodiment:
+  type: bimanual_arm
+  alternatives: [humanoid]
+  hands: 2
+
+environment:
+  type: laboratory
+  realism: staged_real
+
+data:
+  quantity: { value: 500000, unit: episode, minimum: 100000 }
+  episode_duration_seconds: { minimum: 5, typical: 15, maximum: 60 }
+
+modalities: [rgb, depth, joint_state, action]
+
+capture:
+  method: teleoperation
+  action_space:
+    representation: joint_position
+    reference_frame: robot_base
+    control_frequency_hz: 30
+  sensors:
+    - modality: rgb
+      viewpoint: third_person
+      count: 2
+      resolution: { minimum_width: 1280, minimum_height: 720 }
+      frequency_hz: 30
+      calibration_required: true
+    - modality: rgb
+      viewpoint: wrist
+      count: 2
+      frequency_hz: 30
+      calibration_required: true
+  synchronization: { maximum_error_ms: 15, method: software_timestamp }
+
+diversity:
+  distinct_scenes: { minimum: 200 }
+  distinct_objects: { minimum: 2000 }
+  distinct_operators: { minimum: 100 }
+  distinct_embodiment_instances: { minimum: 20 }
+  maximum_share_per_environment: 0.15
+
+geography:
+  collection: [IN, PH, VN, MX]
+  usage: [US, EU, JP, KR]
+
+acceptance:
+  sample:
+    quantity: { value: 1000, unit: episode }
+    delivery_days: 30
+    paid: true
+    evaluation: policy_evaluation
+    notes: Each consortium member evaluates the sample independently; all four must accept.
+  criteria:
+    - metric: task_success_rate
+      operator: gte
+      value: 0.8
+      measurement: >
+        Success judged by supplier QA against per-task success definitions
+        published in the consortium's task list; buyer-side audit on 2% of
+        episodes by rotating member.
+      sample_size: 2000
+      blocking: true
+    - metric: duplicate_rate
+      operator: lte
+      value: 0.01
+      measurement: >
+        Near-duplicate episodes (same scene, object set and trajectory within
+        tolerance) detected by the consortium's dedup tool over the full
+        delivery.
+      blocking: true
+
+licensing:
+  commercial_training: true
+  commercial_deployment: true
+  derivative_models: true
+  redistribution: false
+  exclusive: false
+  notes: >
+    Identical non-exclusive license to each consortium member. Supplier may
+    resell to non-members after a 12-month holdback.
+
+delivery:
+  deadline: "2027-08-31"
+  milestones:
+    - { name: Sample,   date: "2026-10-15", quantity: 1000 }
+    - { name: Tranche 1, date: "2027-01-31", quantity: 150000 }
+    - { name: Tranche 2, date: "2027-05-15", quantity: 325000 }
+    - { name: Final,    date: "2027-08-31", quantity: 500000 }
+  format: { standard: lerobot, version: "2.1" }
+  transfer: s3
+
+economics:
+  pricing_model: fixed_budget
+  budget: { min: 1.8, max: 3.2, currency: USD, basis: per_unit, unit: episode }
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-19T16:00:00Z"
+  publisher:
+    type: consortium
+    name: Example Manipulation Data Consortium (4 members)
+  contact: { method: email, value: consortium@example.invalid }
