@@ -211,3 +211,109 @@ export function inspectRequest(doc) {
     extensions: doc.extensions ? Object.keys(doc.extensions) : [],
   };
 }
+
+
+// ------------------------------------------------- other object renderers
+
+function box(header, rows, version) {
+  const rule = "─".repeat(64);
+  return [rule, header, rule, ...rows.filter(Boolean), rule, `odrs_version ${version}`].join("\n");
+}
+
+function kv(label, value) {
+  if (value === undefined || value === null || value === "") return null;
+  return `${label.padEnd(13)}${value}`;
+}
+
+export function renderCapability(doc) {
+  const cap = doc.capacity ? `${n(doc.capacity.value)} ${doc.capacity.unit}s / ${doc.capacity.per}` : null;
+  return box(
+    `ODRS CAPABILITY  ${doc.id ?? "(unpublished draft)"}${doc.publication?.status ? `  [${doc.publication.status.toUpperCase()}]` : ""}`,
+    [
+      ...(doc.title ? [doc.title, "─".repeat(64)] : []),
+      kv("Provider", doc.provider?.name ?? doc.provider?.type),
+      kv("Tasks", doc.tasks?.join(" · ")),
+      kv("Embodiments", doc.embodiments?.map((e) => e.platform ? `${e.type} (${e.platform}${e.count ? ` ×${e.count}` : ""})` : `${e.type}${e.count ? ` ×${e.count}` : ""}`).join(" · ")),
+      kv("Environments", doc.environments?.map((e) => e.type).join(" · ")),
+      kv("Modalities", doc.modalities?.join(" · ")),
+      kv("Methods", doc.capture_methods?.join(" · ")),
+      kv("Capacity", cap),
+      kv("Operators", doc.operators != null ? String(doc.operators) : undefined),
+      kv("Geography", doc.geography?.available?.join(", ")),
+      kv("Pricing", doc.pricing?.from != null ? `from ${doc.pricing.from} ${doc.pricing.currency ?? ""} (${doc.pricing.basis})` : undefined),
+      kv("Formats", doc.delivery_formats?.join(" · ")),
+      kv("Contact", doc.publication?.contact?.value),
+    ],
+    doc.odrs_version
+  );
+}
+
+export function renderOffer(doc) {
+  const price = doc.pricing
+    ? doc.pricing.amount != null
+      ? `${n(doc.pricing.amount)} ${doc.pricing.currency ?? ""} (${doc.pricing.basis})`
+      : `${n(doc.pricing.min)}–${n(doc.pricing.max)} ${doc.pricing.currency ?? ""} (${doc.pricing.basis})`
+    : undefined;
+  return box(
+    `ODRS OFFER  ${doc.id ?? "(unpublished draft)"}${doc.status ? `  [${doc.status.toUpperCase()}]` : ""}`,
+    [
+      kv("Answers", doc.request),
+      kv("Provider", doc.provider?.name ?? doc.provider?.type),
+      kv("Quantity", doc.quantity ? `${n(doc.quantity.value)} ${doc.quantity.unit}s` : undefined),
+      kv("Sample", doc.sample?.quantity ? `${n(doc.sample.quantity.value)} ${doc.sample.quantity.unit}s${doc.sample.paid ? " (paid)" : ""}${doc.sample.delivery_days ? ` in ${doc.sample.delivery_days}d` : ""}` : undefined),
+      kv("Pricing", price),
+      kv("Delivery", doc.delivery?.deadline),
+      kv("Deviations", doc.deviations ? (doc.deviations.length === 0 ? "none — full spec conformance declared" : doc.deviations.map((d) => `${d.path} → ${JSON.stringify(d.proposed)}`).join(" · ")) : undefined),
+      kv("Expires", doc.validity?.expires_at),
+      kv("Contact", doc.contact?.value),
+    ],
+    doc.odrs_version
+  );
+}
+
+export function renderDataset(doc) {
+  return box(
+    `ODRS DATASET  ${doc.id ?? "(unpublished draft)"}${doc.fulfills?.portion ? `  [${doc.fulfills.portion.toUpperCase()}]` : ""}`,
+    [
+      ...(doc.title ? [doc.title, "─".repeat(64)] : []),
+      kv("Fulfills", [doc.fulfills?.request, doc.fulfills?.offer].filter(Boolean).join("  ·  ")),
+      kv("Provider", doc.provider?.name ?? doc.provider?.type),
+      kv("Contains", doc.content?.quantity ? `${n(doc.content.quantity.value)} ${doc.content.quantity.unit}s` : undefined),
+      kv("Modalities", doc.content?.modalities?.join(" · ")),
+      kv("Format", doc.format?.standard ? `${doc.format.standard}${doc.format.version ? ` ${doc.format.version}` : ""}` : undefined),
+      kv("Location", doc.location?.uri ? `${doc.location.uri} (${doc.location.access ?? "?"})` : undefined),
+      kv("Checksum", doc.location?.checksum ? `${doc.location.checksum.algorithm}:${doc.location.checksum.value.slice(0, 16)}…` : undefined),
+      kv("Collected", doc.collection?.geography?.join(", ")),
+      kv("Measured", doc.measured?.length ? `${doc.measured.length} metric(s) reported` : undefined),
+      kv("Delivered", doc.delivered_at),
+    ],
+    doc.odrs_version
+  );
+}
+
+export function renderAttestation(doc) {
+  const verdicts = doc.claims?.map((c) => `${c.property}:${c.verdict}`).join(" · ");
+  return box(
+    `ODRS ATTESTATION  ${doc.id ?? "(unpublished draft)"}${doc.outcome ? `  [${doc.outcome.toUpperCase()}]` : ""}`,
+    [
+      kv("Subject", doc.subject ? `${doc.subject.type} ${doc.subject.id}` : undefined),
+      kv("Attestor", doc.attestor ? `${doc.attestor.name ?? ""} (${doc.attestor.role})`.trim() : undefined),
+      kv("Claims", verdicts),
+      kv("Scope", doc.scope?.portion),
+      kv("Issued", doc.issued_at),
+      kv("Signed", doc.signature ? "yes" : undefined),
+    ],
+    doc.odrs_version
+  );
+}
+
+/** Render any ODRS document, dispatching on type. */
+export function renderDocument(doc) {
+  switch (doc?.type) {
+    case "capability": return renderCapability(doc);
+    case "offer": return renderOffer(doc);
+    case "dataset": return renderDataset(doc);
+    case "attestation": return renderAttestation(doc);
+    default: return renderRequest(doc);
+  }
+}

@@ -2,7 +2,7 @@
 
 **A machine-readable format for expressing Physical AI data requirements.**
 
-*Proposed open specification, v0.1. Early-stage: no adoption is claimed.*
+*Proposed open specification, v0.2. Early-stage: no adoption is claimed.*
 
 ---
 
@@ -75,7 +75,7 @@ const { valid, errors, warnings } = validateRequest(doc);
 
 | Path | What |
 |---|---|
-| [`spec/v0.1/data-request.schema.json`](spec/v0.1/data-request.schema.json) | The normative JSON Schema |
+| [`spec/v0.1/`](spec/v0.1/) · [`spec/v0.2/`](spec/v0.2/) | Normative JSON Schemas — request (v0.1) and the full object family (v0.2) |
 | [`spec/v0.1/specification.md`](spec/v0.1/specification.md) | Field-by-field semantics, vocabularies, well-known metrics |
 | [`spec/v0.1/examples/`](spec/v0.1/examples/) | 10 worked examples (CC0) — humanoid warehouse, egocentric kitchen, tactile grasping, pooled-consortium buying, … |
 | [`bin/odrs.mjs`](bin/odrs.mjs) | CLI: `validate` · `render` · `inspect` · `init` · `version` |
@@ -105,17 +105,19 @@ complementary, not competing. Details:
 
 ## Roadmap
 
-| Version | Object | Question it answers |
-|---|---|---|
-| **0.1 (this)** | `data_request` | What data do I need? |
-| 0.2 | `capability` | What data can I provide? |
-| 0.3 | `offer` | What can I provide *for this request*? |
-| 0.4 | `dataset` | What was actually delivered? |
-| 0.5 | `attestation` | Is it what was promised, and where did it come from? |
-| 1.0 | exchange | The full request → offer → delivery → verification loop |
+| Version | Object | Question it answers | Status |
+|---|---|---|---|
+| 0.1 | `data_request` | What data do I need? | **live** |
+| 0.2 | `capability` | What data can I provide? | **live** |
+| 0.2 | `offer` | What can I provide *for this request*? | **live** |
+| 0.2 | `dataset` | What was actually delivered? | **live** |
+| 0.2 | `attestation` | Is it what was promised, and where did it come from? | **live** |
+| 1.0 | exchange hardening | Stabilized after real-world adoption feedback | reserved |
 
-Future versions are named so the ID prefixes and `type` values can be
-reserved now; they are otherwise deliberately unspecified.
+v0.2 ships the full object family (originally planned as v0.2–v0.5 — see
+CHANGELOG for the reasoning). The complete exchange is demonstrated in
+[`spec/v0.2/examples/exchange/`](spec/v0.2/examples/exchange/): one story,
+four linked documents, including a negotiated deviation.
 
 ## Governance, licensing, contributing
 
@@ -134,7 +136,7 @@ proposal ([proposals/TEMPLATE.md](proposals/TEMPLATE.md)).
 
 ## Status, honestly
 
-ODRS v0.1 is a proposal with a reference implementation and a test suite. It
+ODRS v0.2 is a proposal with a reference implementation and a test suite. It
 has not been adopted by anyone. The fastest way to falsify or improve it:
 take a real data requirement you have, try to encode it, and open an issue
 where the encoding was ambiguous or impossible.

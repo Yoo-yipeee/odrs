@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odrs.org/spec/v0.2/dataset.schema.json",
+  "title": "ODRS Dataset",
+  "description": "A delivery manifest: 'what was actually delivered.' NOT a data format — the data itself lives in LeRobot/RLDS/MCAP/etc.; this object describes the delivered artifact (contents as actuals, format, location, provenance, granted license) and links it back to the request/offer it fulfills. The 'measured' block records actuals against the request's acceptance criteria; verification verdicts belong in ATTESTATION objects.",
+  "type": "object",
+  "required": ["odrs_version", "type", "content"],
+  "additionalProperties": true,
+
+  "properties": {
+    "odrs_version": { "type": "string", "pattern": "^0\\.2(\\.[0-9]+)?$" },
+    "type": { "const": "dataset" },
+    "id": { "type": "string", "pattern": "^dat_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "title": { "type": "string", "maxLength": 200 },
+    "summary": { "type": "string", "maxLength": 4000 },
+
+    "fulfills": {
+      "type": "object",
+      "description": "What this delivery answers. Both optional: a dataset can be published standalone (spec-described existing data), but a delivery inside an exchange SHOULD link both.",
+      "additionalProperties": false,
+      "properties": {
+        "request": { "type": "string", "pattern": "^dr_[0-9A-HJKMNP-TV-Z]{26}$" },
+        "offer": { "type": "string", "pattern": "^off_[0-9A-HJKMNP-TV-Z]{26}$" },
+        "portion": {
+          "type": "string",
+          "enum": ["sample", "partial", "final"],
+          "description": "Which stage of the engagement this delivery is: the acceptance sample, an interim tranche, or the completing delivery."
+        }
+      }
+    },
+
+    "provider": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string", "enum": ["organization", "individual", "consortium", "anonymous"] },
+        "name": { "type": "string", "maxLength": 200 },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+
+    "content": {
+      "type": "object",
+      "description": "What the artifact contains, as ACTUALS — same vocabulary as the request's requirement fields so buyer tooling can diff delivered-vs-requested mechanically. REQUIRED.",
+      "required": ["quantity"],
+      "additionalProperties": true,
+      "properties": {
+        "quantity": {
+          "type": "object",
+          "required": ["value", "unit"],
+          "additionalProperties": false,
+          "properties": {
+            "value": { "type": "number", "exclusiveMinimum": 0 },
+            "unit": { "type": "string", "enum": ["episode", "demonstration", "hour", "frame", "scene", "interaction", "sample"] }
+          }
+        },
+        "task": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "category": { "type": "string" },
+            "type": { "type": "string", "maxLength": 120 }
+          }
+        },
+        "embodiment": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "type": { "type": "string" },
+            "platform": { "type": "string", "maxLength": 120 }
+          }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "type": { "type": "string" },
+            "realism": { "type": "string" }
+          }
+        },
+        "modalities": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "episode_duration_seconds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minimum": { "type": "number" },
+            "mean": { "type": "number" },
+            "maximum": { "type": "number" }
+          }
+        },
+        "diversity_actual": {
+          "type": "object",
+          "description": "Achieved diversity counts — the delivered counterpart of the request's diversity floors.",
+          "additionalProperties": { "type": "number" }
+        },
+        "failure_share": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of episodes that are unsuccessful attempts. Matters when the request set includes_failures."
+        }
+      }
+    },
+
+    "format": {
+      "type": "object",
+      "description": "The artifact's format. This is where ODRS hands off to the dataset-format standards.",
+      "additionalProperties": false,
+      "properties": {
+        "standard": { "type": "string", "enum": ["lerobot", "rlds", "hdf5", "mcap", "rosbag2", "webdataset", "parquet", "custom"] },
+        "version": { "type": "string", "maxLength": 40 },
+        "notes": { "type": "string", "maxLength": 1000 }
+      }
+    },
+
+    "location": {
+      "type": "object",
+      "description": "Where and how the artifact is accessed. A checksum makes the manifest bind to one exact artifact — without it, an attestation about 'the dataset' is about nothing in particular.",
+      "additionalProperties": true,
+      "properties": {
+        "uri": { "type": "string", "format": "uri" },
+        "access": { "type": "string", "enum": ["open", "gated", "private"] },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "checksum": {
+          "type": "object",
+          "required": ["algorithm", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": { "type": "string", "enum": ["sha256", "sha512", "blake3"] },
+            "value": { "type": "string", "maxLength": 200 }
+          }
+        }
+      }
+    },
+
+    "collection": {
+      "type": "object",
+      "description": "How the data was produced — the provenance core.",
+      "additionalProperties": true,
+      "properties": {
+        "method": { "type": "string" },
+        "period": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from": { "type": "string", "format": "date" },
+            "to": { "type": "string", "format": "date" }
+          }
+        },
+        "geography": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" } },
+        "operators": { "type": "integer", "minimum": 0 },
+        "notes": { "type": "string", "maxLength": 2000 }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "description": "Rights hygiene of the artifact. These are the supplier's declarations; independent verification is an ATTESTATION.",
+      "additionalProperties": true,
+      "properties": {
+        "consent_artifacts_included": { "type": "boolean" },
+        "provenance_documentation_included": { "type": "boolean" },
+        "pii_treatment": {
+          "type": "string",
+          "enum": ["none_present", "blurred_at_source", "removed", "present_with_consent"],
+          "description": "How personal data in the recordings was handled."
+        },
+        "chain": {
+          "type": "array",
+          "description": "Custody steps from capture to delivery.",
+          "items": {
+            "type": "object",
+            "required": ["step"],
+            "additionalProperties": true,
+            "properties": {
+              "step": { "type": "string", "maxLength": 200 },
+              "party": { "type": "string", "maxLength": 200 },
+              "date": { "type": "string", "format": "date" }
+            }
+          }
+        }
+      }
+    },
+
+    "licensing": {
+      "type": "object",
+      "description": "Rights actually granted with this artifact.",
+      "additionalProperties": true,
+      "properties": {
+        "research": { "type": "boolean" },
+        "commercial_training": { "type": "boolean" },
+        "commercial_deployment": { "type": "boolean" },
+        "derivative_models": { "type": "boolean" },
+        "redistribution": { "type": "boolean" },
+        "exclusive": { "type": "boolean" },
+        "license_name": { "type": "string", "maxLength": 120 },
+        "license_uri": { "type": "string", "format": "uri" }
+      }
+    },
+
+    "measured": {
+      "type": "array",
+      "description": "Measured actuals against the request's acceptance criteria — the supplier's own numbers. Same metric names and measurement discipline as acceptance.criteria. Verdicts (pass/fail) belong in an ATTESTATION, not here.",
+      "items": {
+        "type": "object",
+        "required": ["metric", "value", "measurement"],
+        "additionalProperties": true,
+        "properties": {
+          "metric": { "type": "string", "maxLength": 80 },
+          "value": {},
+          "unit": { "type": "string", "maxLength": 40 },
+          "measurement": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "sample_size": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+
+    "delivered_at": { "type": "string", "format": "date-time" },
+
+    "publication": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "visibility": { "type": "string", "enum": ["public", "private"] },
+        "contact": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": { "type": "string", "enum": ["email", "url", "via_platform", "none"] },
+            "value": { "type": "string", "maxLength": 400 }
+          }
+        }
+      }
+    },
+
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$" },
+      "additionalProperties": { "type": "object" }
+    }
+  }
+}

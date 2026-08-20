@@ -10,8 +10,8 @@
 import { writeFileSync, existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { validateRequest } from "../src/validate.mjs";
-import { renderRequest, inspectRequest } from "../src/render.mjs";
+import { validateDocument } from "../src/validate.mjs";
+import { renderDocument, inspectRequest } from "../src/render.mjs";
 import { loadDocument } from "../src/load.mjs";
 import { requestId } from "../src/ulid.mjs";
 
@@ -52,7 +52,7 @@ function load(path) {
 switch (command) {
   case "validate": {
     const doc = load(file);
-    const result = validateRequest(doc);
+    const result = validateDocument(doc);
 
     if (flags.has("--json")) {
       console.log(JSON.stringify(result, null, 2));
@@ -60,7 +60,8 @@ switch (command) {
     }
 
     if (result.valid) {
-      console.log(`${OK} Valid ODRS v${doc.odrs_version} data request`);
+      const label = (result.objectType ?? "document").replace("_", " ");
+      console.log(`${OK} Valid ODRS v${doc.odrs_version} ${label}`);
       const parts = [];
       if (doc.id) parts.push(`id ${doc.id}`);
       if (doc.title) parts.push(doc.title);
@@ -79,12 +80,12 @@ switch (command) {
 
   case "render": {
     const doc = load(file);
-    const result = validateRequest(doc);
+    const result = validateDocument(doc);
     if (!result.valid) {
       console.error(`${ERR} refusing to render an invalid document; run 'odrs validate ${file}' first`);
       process.exit(1);
     }
-    console.log(renderRequest(doc));
+    console.log(renderDocument(doc));
     break;
   }
 
@@ -111,7 +112,7 @@ switch (command) {
     const pkg = JSON.parse(
       readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8")
     );
-    console.log(`@odrs/core ${pkg.version} — implements ODRS v0.1`);
+    console.log(`@odrs/core ${pkg.version} — implements ODRS v0.1 + v0.2`);
     break;
   }
 

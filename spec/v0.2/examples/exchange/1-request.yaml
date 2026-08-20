@@ -1,0 +1,103 @@
+# ODRS v0.2 exchange example, document 1 of 4 — THE REQUEST.
+#
+# One complete exchange told across four linked documents:
+#   1-request.yaml      dr_...WAREX26EXCHANGE0DEMO01  buyer publishes the need
+#   2-offer.yaml        off_...                       supplier answers, with deviations
+#   3-dataset.yaml      dat_...                       the sample tranche is delivered
+#   4-attestation.yaml  att_...                       buyer's acceptance verdicts
+#
+# This is the v0.2 request object — identical semantics to v0.1, version
+# string aside. Illustrative; all organizations fictional. Licensed CC0.
+
+odrs_version: "0.2"
+type: data_request
+id: dr_01M0FFJ4STVWXYZ4C5D6E7F8G9
+
+title: 30K bimanual tote-picking episodes, staged-real warehouses, IN
+
+summary: >
+  Fine-tuning data for tote-to-conveyor picking. Failure cases wanted at a
+  bounded rate. Sample-gated; partial fulfillment accepted from 10K.
+
+task:
+  category: manipulation
+  type: tote_picking
+  includes_failures: true
+
+embodiment:
+  type: bimanual_arm
+  hands: 2
+
+environment:
+  type: warehouse
+  realism: staged_real
+
+data:
+  quantity: { value: 30000, unit: episode, minimum: 10000 }
+  episode_duration_seconds: { minimum: 6, typical: 15, maximum: 45 }
+
+modalities: [rgb, depth, joint_state, action]
+
+capture:
+  method: teleoperation
+  action_space:
+    representation: joint_position
+    reference_frame: robot_base
+    control_frequency_hz: 50
+  synchronization: { maximum_error_ms: 8, method: hardware_trigger }
+
+diversity:
+  distinct_scenes: { minimum: 12 }
+  distinct_objects: { minimum: 150 }
+  distinct_operators: { minimum: 10 }
+
+geography:
+  collection: [IN]
+  usage: [US]
+
+acceptance:
+  sample:
+    quantity: { value: 200, unit: episode }
+    delivery_days: 14
+    paid: true
+    evaluation: manual_review
+  criteria:
+    - id: sync
+      metric: sync_error_ms
+      operator: lte
+      value: 8
+      unit: ms
+      measurement: p99 pairwise stream skew per episode, buyer ingest tool, every delivered episode.
+      blocking: true
+    - id: success
+      metric: task_success_rate
+      operator: gte
+      value: 0.88
+      measurement: >
+        Success = item ends inside the conveyor zone, no drop, no reset.
+        Judged by one buyer reviewer per episode on a random sample.
+      sample_size: 200
+      blocking: true
+
+licensing:
+  commercial_training: true
+  commercial_deployment: true
+  redistribution: false
+  exclusive: false
+  provenance_documentation_required: true
+
+delivery:
+  deadline: "2026-12-01"
+  format: { standard: lerobot, version: "2.1" }
+  transfer: s3
+
+economics:
+  pricing_model: fixed_budget
+  budget: { min: 2.5, max: 4, currency: USD, basis: per_unit, unit: episode }
+
+publication:
+  visibility: public
+  status: open
+  published_at: "2026-08-10T09:00:00Z"
+  publisher: { type: organization, name: Example Fulfilment AI }
+  contact: { method: email, value: data@example-fulfilment.invalid }

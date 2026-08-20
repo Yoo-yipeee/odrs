@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odrs.org/spec/v0.2/offer.schema.json",
+  "title": "ODRS Offer",
+  "description": "A supplier's bound response to a specific data request: 'here is what I can deliver against your spec, at this price, by this date, with these deviations.' An offer references a REQUEST (required) and optionally the supplier's standing CAPABILITY. The deviations block is the heart of the object: real offers rarely match a spec exactly, and unstated deviations are how deliveries fail.",
+  "type": "object",
+  "required": ["odrs_version", "type", "request", "quantity"],
+  "additionalProperties": true,
+
+  "properties": {
+    "odrs_version": { "type": "string", "pattern": "^0\\.2(\\.[0-9]+)?$" },
+    "type": { "const": "offer" },
+    "id": { "type": "string", "pattern": "^off_[0-9A-HJKMNP-TV-Z]{26}$" },
+
+    "request": {
+      "type": "string",
+      "pattern": "^dr_[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "The data request this offer answers. REQUIRED — an offer without a request is a capability, and ODRS has a separate object for that."
+    },
+    "capability": {
+      "type": "string",
+      "pattern": "^cap_[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "The supplier's standing capability this offer draws on, if published."
+    },
+
+    "provider": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string", "enum": ["organization", "individual", "consortium", "anonymous"] },
+        "name": { "type": "string", "maxLength": 200 },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+
+    "quantity": {
+      "type": "object",
+      "description": "What the supplier commits to deliver. May be less than the request's full quantity — partial offers are first-class (requests declare data.quantity.minimum for exactly this reason).",
+      "required": ["value", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "type": "string", "enum": ["episode", "demonstration", "hour", "frame", "scene", "interaction", "sample"] }
+      }
+    },
+
+    "sample": {
+      "type": "object",
+      "description": "Proposed sample terms. SHOULD mirror or improve on the request's acceptance.sample.",
+      "additionalProperties": true,
+      "properties": {
+        "quantity": {
+          "type": "object",
+          "required": ["value", "unit"],
+          "properties": { "value": { "type": "number", "exclusiveMinimum": 0 }, "unit": { "type": "string" } }
+        },
+        "delivery_days": { "type": "integer", "minimum": 1 },
+        "paid": { "type": "boolean" },
+        "notes": { "type": "string", "maxLength": 1000 }
+      }
+    },
+
+    "pricing": {
+      "type": "object",
+      "description": "The quoted price. Optional (an offer without pricing is an expression of serious interest pending negotiation), but when present the basis rule applies exactly as in requests.",
+      "additionalProperties": false,
+      "dependentRequired": { "amount": ["basis"], "min": ["basis"], "max": ["basis"] },
+      "properties": {
+        "amount": { "type": "number", "minimum": 0, "description": "Exact quote. Use either amount, or min+max, not both." },
+        "min": { "type": "number", "minimum": 0 },
+        "max": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "basis": { "type": "string", "enum": ["total", "per_unit"] },
+        "unit": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 1000 }
+      }
+    },
+
+    "delivery": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "start_date": { "type": "string", "format": "date" },
+        "deadline": { "type": "string", "format": "date", "description": "When the offered quantity would be fully delivered." },
+        "milestones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["date"],
+            "properties": {
+              "name": { "type": "string", "maxLength": 120 },
+              "date": { "type": "string", "format": "date" },
+              "quantity": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        },
+        "format": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "standard": { "type": "string", "enum": ["lerobot", "rlds", "hdf5", "mcap", "rosbag2", "webdataset", "parquet", "custom", "unspecified"] },
+            "version": { "type": "string", "maxLength": 40 }
+          }
+        }
+      }
+    },
+
+    "licensing_granted": {
+      "type": "object",
+      "description": "Rights the supplier grants under this offer. Same flags as request.licensing; the buyer diffs this against their requirement.",
+      "additionalProperties": true,
+      "properties": {
+        "research": { "type": "boolean" },
+        "commercial_training": { "type": "boolean" },
+        "commercial_deployment": { "type": "boolean" },
+        "derivative_models": { "type": "boolean" },
+        "redistribution": { "type": "boolean" },
+        "exclusive": { "type": "boolean" },
+        "exclusivity_months": { "type": "integer", "minimum": 0 },
+        "provenance_documentation": { "type": "boolean" },
+        "consent_artifacts": { "type": "boolean" }
+      }
+    },
+
+    "deviations": {
+      "type": "array",
+      "description": "Explicit differences from the request's specification. THE most important block in an offer: 'we can deliver everything except 10ms sync — we achieve 15ms' stated up front is a negotiation; discovered at delivery it is a dispute. Each deviation names the request field it deviates from.",
+      "items": {
+        "type": "object",
+        "required": ["path", "proposed"],
+        "additionalProperties": true,
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Dotted path into the request document, e.g. 'capture.synchronization.maximum_error_ms' or 'diversity.distinct_environments.minimum'."
+          },
+          "requested": { "description": "The request's value, for the reader's convenience." },
+          "proposed": { "description": "What the supplier proposes instead. REQUIRED." },
+          "note": { "type": "string", "maxLength": 1000, "description": "Why, and what it means for the buyer." }
+        }
+      }
+    },
+
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expires_at": { "type": "string", "format": "date-time", "description": "After this instant the offer lapses without action by either party." }
+      }
+    },
+
+    "status": {
+      "type": "string",
+      "enum": ["draft", "submitted", "withdrawn", "accepted", "rejected", "expired"],
+      "description": "Offer lifecycle. Acceptance in ODRS is a status signal, not a contract — the parties' agreement governs."
+    },
+
+    "submitted_at": { "type": "string", "format": "date-time" },
+
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": { "type": "string", "enum": ["email", "url", "via_platform", "none"] },
+        "value": { "type": "string", "maxLength": 400 }
+      }
+    },
+
+    "notes": { "type": "string", "maxLength": 4000 },
+
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$" },
+      "additionalProperties": { "type": "object" }
+    }
+  }
+}

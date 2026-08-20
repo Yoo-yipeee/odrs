@@ -1,0 +1,82 @@
+# ODRS v0.2 exchange example, document 3 of 4 — THE DATASET (sample tranche).
+#
+# The supplier delivers the 200-episode sample and ships this manifest with
+# it: contents as actuals, format, checksum-bound location, provenance, and
+# their own measured numbers against the request's criteria. Verdicts are NOT
+# here — judging is the buyer's move (document 4). Illustrative; fictional
+# organizations. Licensed CC0.
+
+odrs_version: "0.2"
+type: dataset
+id: dat_01M0FFM6VWXYZ6E7F8G9H0J1K2
+
+title: Sample tranche — 200 bimanual tote-picking episodes
+
+fulfills:
+  request: dr_01M0FFJ4STVWXYZ4C5D6E7F8G9
+  offer: off_01M0FFK5TVWXYZ5D6E7F8G9H0J
+  portion: sample
+
+provider:
+  type: organization
+  name: Example Teleop Collective
+
+content:
+  quantity: { value: 200, unit: episode }
+  task: { category: manipulation, type: tote_picking }
+  embodiment: { type: bimanual_arm }
+  environment: { type: warehouse, realism: staged_real }
+  modalities: [rgb, depth, joint_state, action]
+  episode_duration_seconds: { minimum: 7, mean: 14.2, maximum: 41 }
+  diversity_actual:
+    distinct_scenes: 4
+    distinct_objects: 62
+    distinct_operators: 6
+  failure_share: 0.09
+
+format: { standard: lerobot, version: "2.1" }
+
+location:
+  uri: s3://example-teleop-deliveries/fulfilment-ai/sample-2026-09/
+  access: gated
+  size_bytes: 48318382080
+  checksum:
+    algorithm: sha256
+    value: 9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0
+
+collection:
+  method: teleoperation
+  period: { from: "2026-09-02", to: "2026-09-09" }
+  geography: [IN]
+  operators: 6
+
+provenance:
+  consent_artifacts_included: true
+  provenance_documentation_included: true
+  pii_treatment: blurred_at_source
+  chain:
+    - { step: Captured on hardware-triggered rigs, sites BLR-2 and BLR-3, party: Example Teleop Collective, date: "2026-09-09" }
+    - { step: QA filter and format conversion to LeRobotDataset 2.1, party: Example Teleop Collective, date: "2026-09-10" }
+
+licensing:
+  commercial_training: true
+  commercial_deployment: true
+  redistribution: false
+  exclusive: false
+
+measured:
+  - metric: sync_error_ms
+    value: 9.4
+    unit: ms
+    measurement: p99 pairwise stream skew per episode, our replay tool, all 200 episodes.
+    sample_size: 200
+  - metric: task_success_rate
+    value: 0.91
+    measurement: Supplier QA judgement per the request's success definition, all 200 episodes.
+    sample_size: 200
+
+delivered_at: "2026-09-10T16:00:00Z"
+
+publication:
+  visibility: private
+  contact: { method: email, value: programs@example-teleop.invalid }

@@ -5,7 +5,7 @@
   "invalid-modality.json": "not an allowed value",
   "retired-unit-trajectory.json": "not an allowed value",
   "invalid-country.json": "ISO 3166-1",
-  "invalid-version.json": "not a version this validator accepts",
+  "invalid-version.json": "not a version this validator",
   "malformed-id.json": "not a valid ODRS id",
   "wrong-type-quantity.json": "expected number",
   "invalid-status.json": "not an allowed value",

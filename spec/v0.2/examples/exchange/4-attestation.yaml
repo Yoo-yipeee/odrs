@@ -1,0 +1,70 @@
+# ODRS v0.2 exchange example, document 4 of 4 — THE ATTESTATION.
+#
+# The buyer examines the sample against their own acceptance criteria and
+# records verdicts. Note criterion ids referencing the request's acceptance
+# block, the checksum binding the verdicts to the exact artifact examined,
+# and the outcome: accepted WITH deviations — the negotiated 10ms sync from
+# the offer, now measured and confirmed. Illustrative; fictional
+# organizations. Licensed CC0.
+
+odrs_version: "0.2"
+type: attestation
+id: att_01M0FFP925AT6GS2THJ3YW56YW
+
+subject:
+  type: dataset
+  id: dat_01M0FFM6VWXYZ6E7F8G9H0J1K2
+  checksum:
+    algorithm: sha256
+    value: 9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0
+
+attestor:
+  role: buyer
+  name: Example Fulfilment AI
+
+claims:
+  - property: sync_error_ms
+    criterion_id: sync
+    verdict: pass
+    value: 9.6
+    unit: ms
+    threshold: 10
+    measurement: >
+      p99 pairwise stream skew per episode, buyer ingest tool, all 200
+      episodes. Judged against the NEGOTIATED bound of 10ms from offer
+      off_01M0FFK5TVWXYZ5D6E7F8G9H0J deviations[0], not the original 8ms.
+    sample_size: 200
+
+  - property: task_success_rate
+    criterion_id: success
+    verdict: pass
+    value: 0.895
+    threshold: 0.88
+    measurement: >
+      One buyer reviewer per episode against the request's success
+      definition; 20 episodes double-reviewed, agreement 19/20.
+    sample_size: 200
+
+  - property: diversity_trajectory
+    verdict: measured
+    value: "4 scenes / 62 objects / 6 operators in sample"
+    measurement: >
+      Counted from delivered metadata. Sample-stage floors were not
+      contracted; full-order floors (12/150/10, operators renegotiated to 8)
+      remain binding at final delivery.
+
+  - property: consent_artifacts_complete
+    verdict: pass
+    measurement: Consent records and site releases present for both sites, checked against the delivered operator and site manifests.
+
+scope:
+  portion: sample
+  quantity_examined: { value: 200, unit: episode }
+
+outcome: accepted_with_deviations
+
+issued_at: "2026-09-15T10:00:00Z"
+
+notes: >
+  Sample accepted; program proceeds to Tranche 1 at the negotiated 10ms sync
+  bound and USD 3.05/episode. Full-order diversity floors reconfirmed.

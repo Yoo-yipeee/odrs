@@ -1,0 +1,81 @@
+# ODRS v0.2 example — a teleoperation collection company's standing capability.
+# Illustrative; Example Teleop Collective is fictional. Licensed CC0.
+
+odrs_version: "0.2"
+type: capability
+id: cap_01M0FFH2QRSTVWXYZ2A3B4C5D6
+
+title: Humanoid + bimanual teleoperation farm, IN/PH/VN, 300K episodes/month
+
+summary: >
+  Managed teleoperation collection across three sites with remote operators.
+  Strong on warehouse and household manipulation; consent and provenance
+  documentation standard on every engagement.
+
+provider:
+  type: organization
+  name: Example Teleop Collective
+  url: https://example-teleop.invalid
+
+tasks: [manipulation, grasping, warehouse, household, assembly]
+
+embodiments:
+  - { type: humanoid, count: 18, platform: Unitree G1 }
+  - { type: bimanual_arm, count: 40 }
+  - { type: robotic_arm, count: 25, platform: Franka Research 3 }
+
+environments:
+  - { type: warehouse, realism: [staged_real, in_the_wild], count: 4 }
+  - { type: home, realism: [staged_real], count: 12 }
+  - { type: laboratory, realism: [lab_mockup], count: 3 }
+
+modalities: [rgb, depth, joint_state, action, force_torque]
+
+capture_methods: [teleoperation, kinesthetic_teaching]
+
+capacity:
+  value: 300000
+  unit: episode
+  per: month
+  notes: Sustained across all sites; single-spec programs above 150K/month need a ramp-up month.
+
+operators: 140
+
+geography:
+  available: [IN, PH, VN]
+  remote_teleoperation: true
+
+demonstrated:
+  - metric: sync_error_ms
+    value: 6
+    unit: ms
+    evidence_uri: https://example-teleop.invalid/quality/sync-report-2026q2
+    notes: p99 across the last 400K delivered episodes, hardware-triggered rigs.
+  - metric: task_success_rate
+    value: 0.93
+    notes: Self-reported across 2026 deliveries; definitions vary per engagement.
+
+licensing_available:
+  research: true
+  commercial_training: true
+  commercial_deployment: true
+  derivative_models: true
+  redistribution: false
+  exclusive: true
+  provenance_documentation: true
+  consent_artifacts: true
+
+pricing:
+  from: 2.1
+  currency: USD
+  basis: per_unit
+  unit: episode
+  notes: Simple single-arm tabletop floor; multi-camera humanoid programs quote higher.
+
+delivery_formats: [lerobot, hdf5, mcap]
+
+publication:
+  visibility: public
+  status: active
+  published_at: "2026-08-01T00:00:00Z"
+  contact: { method: email, value: programs@example-teleop.invalid }

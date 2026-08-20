@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odrs.org/spec/v0.2/attestation.schema.json",
+  "title": "ODRS Attestation",
+  "description": "A party's verified claims about another ODRS object — most commonly a buyer's or third party's acceptance verdicts on a delivered DATASET against a request's acceptance criteria. An attestation says WHO checked WHAT, HOW, and what they found. ODRS deliberately mandates no PKI: the optional signature block carries one if the parties use one, and platform/registry context otherwise establishes authorship.",
+  "type": "object",
+  "required": ["odrs_version", "type", "subject", "attestor", "claims", "issued_at"],
+  "additionalProperties": true,
+
+  "properties": {
+    "odrs_version": { "type": "string", "pattern": "^0\\.2(\\.[0-9]+)?$" },
+    "type": { "const": "attestation" },
+    "id": { "type": "string", "pattern": "^att_[0-9A-HJKMNP-TV-Z]{26}$" },
+
+    "subject": {
+      "type": "object",
+      "description": "The object the claims are about. REQUIRED. When the subject is a dataset, the checksum SHOULD be repeated here so the attestation binds to one exact artifact even if the dataset manifest later changes.",
+      "required": ["type", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["dataset", "offer", "capability", "request"] },
+        "id": { "type": "string", "pattern": "^(dr|cap|off|dat)_[0-9A-HJKMNP-TV-Z]{26}$" },
+        "checksum": {
+          "type": "object",
+          "required": ["algorithm", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": { "type": "string", "enum": ["sha256", "sha512", "blake3"] },
+            "value": { "type": "string", "maxLength": 200 }
+          }
+        }
+      }
+    },
+
+    "attestor": {
+      "type": "object",
+      "description": "Who makes these claims, and their relationship to the transaction — a buyer's acceptance, a supplier's self-declaration, and an independent audit carry different weight, and the role field makes that difference machine-readable. REQUIRED.",
+      "required": ["role"],
+      "additionalProperties": true,
+      "properties": {
+        "role": { "type": "string", "enum": ["buyer", "supplier", "third_party", "platform"] },
+        "name": { "type": "string", "maxLength": 200 },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The verified statements. REQUIRED, at least one. Each claim carries its own measurement description — an unverifiable claim is not an attestation, it is an opinion.",
+      "items": {
+        "type": "object",
+        "required": ["property", "verdict", "measurement"],
+        "additionalProperties": true,
+        "properties": {
+          "property": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "What is being attested: a well-known metric (sync_error_ms, task_success_rate, ...), a criterion id from the request's acceptance block, or a named property ('consent_artifacts_complete', 'checksum_matches')."
+          },
+          "criterion_id": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The acceptance.criteria[].id in the referenced request this verdict answers, when applicable."
+          },
+          "verdict": {
+            "type": "string",
+            "enum": ["pass", "fail", "measured", "inconclusive"],
+            "description": "'measured' = a value is reported without a pass/fail threshold; 'inconclusive' = the check was attempted but could not be completed (say why in measurement)."
+          },
+          "value": { "description": "The measured value, when there is one." },
+          "unit": { "type": "string", "maxLength": 40 },
+          "threshold": { "description": "The threshold applied, when verdict is pass/fail." },
+          "measurement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "How this was checked: method, tooling, population, sample size. REQUIRED — same discipline as acceptance criteria."
+          },
+          "sample_size": { "type": "integer", "minimum": 1 },
+          "evidence_uri": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+
+    "scope": {
+      "type": "object",
+      "description": "What portion of the subject the claims cover.",
+      "additionalProperties": true,
+      "properties": {
+        "portion": { "type": "string", "enum": ["sample", "partial", "full"] },
+        "quantity_examined": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "value": { "type": "number", "exclusiveMinimum": 0 },
+            "unit": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "outcome": {
+      "type": "string",
+      "enum": ["accepted", "accepted_with_deviations", "rejected", "informational"],
+      "description": "The attestor's overall disposition, when the attestation is an acceptance decision. 'informational' for third-party measurements that carry no accept/reject authority."
+    },
+
+    "issued_at": { "type": "string", "format": "date-time", "description": "REQUIRED." },
+    "expires_at": { "type": "string", "format": "date-time" },
+
+    "signature": {
+      "type": "object",
+      "description": "Optional cryptographic signature over the canonical JSON of this document minus this block. ODRS mandates no PKI; if the parties use one, this is where it goes.",
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": { "type": "string", "maxLength": 60 },
+        "value": { "type": "string", "maxLength": 5000 },
+        "key_uri": { "type": "string", "format": "uri" }
+      }
+    },
+
+    "notes": { "type": "string", "maxLength": 4000 },
+
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$" },
+      "additionalProperties": { "type": "object" }
+    }
+  }
+}

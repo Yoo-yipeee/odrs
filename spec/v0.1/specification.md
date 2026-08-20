@@ -280,6 +280,28 @@ addition is a minor version.
   `third_person`, `overhead`, `scene_fixed`, `in_hand`, `other`.
 - **4.9 publication.status** — `draft`, `open`, `partially_fulfilled`,
   `fulfilled`, `closed`, `cancelled`.
+- **4.10 action_space.reference_frame** — `robot_base`, `world`, `camera`,
+  `tool`, `other`.
+- **4.11 synchronization.method** — `hardware_trigger`, `ptp`, `ntp`,
+  `software_timestamp`, `post_hoc_alignment`, `other`. Hardware triggering
+  and PTP are measured guarantees; software timestamps are best-effort —
+  state which you require, because they price differently.
+- **4.12 acceptance.sample.evaluation** — `manual_review`,
+  `automated_check`, `policy_evaluation` (train/fine-tune on the sample and
+  gate on a benchmark), `replay_validation`, `third_party_audit`, `other`.
+- **4.13 delivery.transfer** — `s3`, `gcs`, `azure_blob`, `https`, `sftp`,
+  `physical_media`, `other`.
+
+*Errata (documentation completeness):* the following nested fields exist in
+the schema and follow their parents' semantics — `acceptance.criteria[].id`
+(free label referenced by attestations from v0.2), `environment.description`,
+`taxonomy` on `embodiment` and `environment` (same shape as `task.taxonomy`),
+`sensors[].resolution` (`width`/`height` exact, `minimum_width`/
+`minimum_height` floors), `delivery.milestones[]` (`name`, `date`,
+`quantity`), and free-text `notes` fields on `action_space`, `sensors[]`,
+`diversity`, `metadata`, `licensing`, and `delivery.format`. In v0.1,
+`acceptance.sample.quantity.unit` is free-form — a known looseness, tightened
+in v0.2.
 
 ---
 

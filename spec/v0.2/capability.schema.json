@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odrs.org/spec/v0.2/capability.schema.json",
+  "title": "ODRS Capability",
+  "description": "A supplier's machine-readable answer to 'what data can I provide?' — hardware fleet, environments, methods, capacity, geography, rights. A capability is a standing advertisement, not a commitment; commitments are made per-request via OFFER objects. Mirrors the request vocabularies so matching is field-to-field.",
+  "type": "object",
+  "required": ["odrs_version", "type", "provider", "capacity"],
+  "additionalProperties": true,
+
+  "properties": {
+    "odrs_version": {
+      "type": "string",
+      "pattern": "^0\\.2(\\.[0-9]+)?$",
+      "description": "Specification version. REQUIRED. Capability objects exist from v0.2."
+    },
+    "type": { "const": "capability", "description": "Object discriminator. REQUIRED." },
+    "id": {
+      "type": "string",
+      "pattern": "^cap_[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "'cap_' + ULID. Optional while drafting; REQUIRED once published."
+    },
+    "title": { "type": "string", "maxLength": 200 },
+    "summary": { "type": "string", "maxLength": 4000 },
+
+    "provider": {
+      "type": "object",
+      "description": "Who is offering the capability. REQUIRED — an anonymous standing capability is not actionable, so unlike requests, provider identity (or an explicit anonymous marker plus contact route) is mandatory.",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string", "enum": ["organization", "individual", "consortium", "anonymous"] },
+        "name": { "type": "string", "maxLength": 200 },
+        "id": { "type": "string", "maxLength": 120 },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+
+    "tasks": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "manipulation", "navigation", "locomotion", "assembly", "inspection",
+          "grasping", "human_demonstration", "household", "warehouse",
+          "industrial", "agriculture", "healthcare", "driving",
+          "social_interaction", "other"
+        ]
+      },
+      "description": "Task categories the provider can capture. Same vocabulary as request.task.category — matching is field-to-field."
+    },
+
+    "embodiments": {
+      "type": "array",
+      "description": "Hardware fleet available for collection.",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "humanoid", "robotic_arm", "bimanual_arm", "mobile_robot",
+              "mobile_manipulator", "quadruped", "drone", "autonomous_vehicle",
+              "exoskeleton", "human", "none", "other"
+            ]
+          },
+          "platform": { "type": "string", "maxLength": 120 },
+          "count": { "type": "integer", "minimum": 1, "description": "Instances available." },
+          "notes": { "type": "string", "maxLength": 500 }
+        }
+      }
+    },
+
+    "environments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "home", "kitchen", "office", "warehouse", "factory", "laboratory",
+              "hospital", "farm", "road", "retail", "construction", "outdoor", "other"
+            ]
+          },
+          "realism": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "enum": ["in_the_wild", "staged_real", "lab_mockup", "simulation"] },
+            "description": "Realism levels the provider can deliver in this environment type."
+          },
+          "count": { "type": "integer", "minimum": 1, "description": "Distinct sites available." }
+        }
+      }
+    },
+
+    "modalities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "rgb", "depth", "rgbd", "lidar", "thermal", "event_camera", "audio",
+          "tactile", "force_torque", "imu", "joint_state", "action", "pose",
+          "hand_pose", "body_pose", "eye_gaze", "language_annotation", "text"
+        ]
+      }
+    },
+
+    "capture_methods": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "teleoperation", "kinesthetic_teaching", "scripted_policy",
+          "autonomous_policy", "human_wearable", "fixed_camera_observation",
+          "motion_capture", "simulation", "mixed", "other"
+        ]
+      }
+    },
+
+    "capacity": {
+      "type": "object",
+      "description": "Throughput the provider can sustain. REQUIRED — a capability without capacity cannot be matched against a request quantity.",
+      "required": ["value", "unit", "per"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": {
+          "type": "string",
+          "enum": ["episode", "demonstration", "hour", "frame", "scene", "interaction", "sample"],
+          "description": "Same defined units as request quantities."
+        },
+        "per": { "type": "string", "enum": ["week", "month", "total"], "description": "'total' = one-off available inventory rather than sustained throughput." },
+        "notes": { "type": "string", "maxLength": 500 }
+      }
+    },
+
+    "operators": { "type": "integer", "minimum": 0, "description": "Trained operators available." },
+
+    "geography": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/countryCode" },
+          "description": "Countries where the provider can collect."
+        },
+        "remote_teleoperation": {
+          "type": "boolean",
+          "description": "True if operators can be remote from the robots, decoupling operator geography from collection geography."
+        }
+      }
+    },
+
+    "demonstrated": {
+      "type": "array",
+      "description": "Verifiable claims about achieved quality — 'we have delivered sync <= 5ms' — each ideally backed by evidence or an ATTESTATION reference. Claims without evidence are marketing; consumers SHOULD weight them accordingly.",
+      "items": {
+        "type": "object",
+        "required": ["metric", "value"],
+        "additionalProperties": true,
+        "properties": {
+          "metric": { "type": "string", "maxLength": 80 },
+          "value": {},
+          "unit": { "type": "string", "maxLength": 40 },
+          "evidence_uri": { "type": "string", "format": "uri" },
+          "attestation": { "type": "string", "pattern": "^att_[0-9A-HJKMNP-TV-Z]{26}$" },
+          "notes": { "type": "string", "maxLength": 500 }
+        }
+      }
+    },
+
+    "licensing_available": {
+      "type": "object",
+      "description": "Rights the provider is able to grant. Same flags as request.licensing.",
+      "additionalProperties": true,
+      "properties": {
+        "research": { "type": "boolean" },
+        "commercial_training": { "type": "boolean" },
+        "commercial_deployment": { "type": "boolean" },
+        "derivative_models": { "type": "boolean" },
+        "redistribution": { "type": "boolean" },
+        "exclusive": { "type": "boolean" },
+        "provenance_documentation": { "type": "boolean", "description": "Provider can supply provenance documentation." },
+        "consent_artifacts": { "type": "boolean", "description": "Provider can supply participant consent records and site releases." }
+      }
+    },
+
+    "pricing": {
+      "type": "object",
+      "description": "Indicative pricing. Optional; a bound offer supersedes it.",
+      "additionalProperties": false,
+      "dependentRequired": { "from": ["basis"] },
+      "properties": {
+        "from": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "basis": { "type": "string", "enum": ["total", "per_unit"] },
+        "unit": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 500 }
+      }
+    },
+
+    "delivery_formats": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["lerobot", "rlds", "hdf5", "mcap", "rosbag2", "webdataset", "parquet", "custom"]
+      }
+    },
+
+    "publication": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "visibility": { "type": "string", "enum": ["public", "private"] },
+        "status": { "type": "string", "enum": ["active", "paused", "retired"] },
+        "published_at": { "type": "string", "format": "date-time" },
+        "contact": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": { "type": "string", "enum": ["email", "url", "via_platform", "none"] },
+            "value": { "type": "string", "maxLength": 400 }
+          }
+        }
+      }
+    },
+
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$" },
+      "additionalProperties": { "type": "object" }
+    }
+  },
+
+  "$defs": {
+    "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$", "description": "ISO 3166-1 alpha-2." }
+  }
+}

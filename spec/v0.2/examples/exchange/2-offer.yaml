@@ -1,0 +1,72 @@
+# ODRS v0.2 exchange example, document 2 of 4 — THE OFFER.
+#
+# Example Teleop Collective answers the request. Note the deviations block:
+# they cannot meet the 8ms sync bound and say so UP FRONT, with what they can
+# do instead. Stated now it is a negotiation; discovered at delivery it would
+# be a dispute. Illustrative; all organizations fictional. Licensed CC0.
+
+odrs_version: "0.2"
+type: offer
+id: off_01M0FFK5TVWXYZ5D6E7F8G9H0J
+
+request: dr_01M0FFJ4STVWXYZ4C5D6E7F8G9
+capability: cap_01M0FFH2QRSTVWXYZ2A3B4C5D6
+
+provider:
+  type: organization
+  name: Example Teleop Collective
+  url: https://example-teleop.invalid
+
+quantity: { value: 30000, unit: episode }
+
+sample:
+  quantity: { value: 200, unit: episode }
+  delivery_days: 10
+  paid: true
+  notes: Sample from two sites so scene diversity is visible at gate time.
+
+pricing:
+  min: 2.8
+  max: 3.2
+  currency: USD
+  basis: per_unit
+  unit: episode
+  notes: Final rate depends on the tote SKU mix; fixed after sample review.
+
+delivery:
+  start_date: "2026-09-01"
+  deadline: "2026-11-20"
+  milestones:
+    - { name: Sample, date: "2026-09-10", quantity: 200 }
+    - { name: Tranche 1, date: "2026-10-10", quantity: 12000 }
+    - { name: Final, date: "2026-11-20", quantity: 30000 }
+  format: { standard: lerobot, version: "2.1" }
+
+licensing_granted:
+  commercial_training: true
+  commercial_deployment: true
+  redistribution: false
+  exclusive: false
+  provenance_documentation: true
+  consent_artifacts: true
+
+deviations:
+  - path: capture.synchronization.maximum_error_ms
+    requested: 8
+    proposed: 10
+    note: >
+      Our hardware-trigger rigs hold p99 at 10ms across sites; 8ms would
+      require re-rigging all cells. 10ms has been accepted by comparable
+      manipulation buyers — see the sync report linked from our capability.
+  - path: diversity.distinct_operators.minimum
+    requested: 10
+    proposed: 8
+    note: Eight operators certified on this cell type today; two more certify mid-program.
+
+validity:
+  expires_at: "2026-09-05T00:00:00Z"
+
+status: submitted
+submitted_at: "2026-08-14T11:30:00Z"
+
+contact: { method: email, value: programs@example-teleop.invalid }

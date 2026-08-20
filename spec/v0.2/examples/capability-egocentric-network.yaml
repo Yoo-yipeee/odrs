@@ -1,0 +1,61 @@
+# ODRS v0.2 example — an egocentric human-data collection network.
+# No robots at all: embodiment 'human', wearable capture. Illustrative;
+# Example Everyday Data Network is fictional. Licensed CC0.
+
+odrs_version: "0.2"
+type: capability
+id: cap_01M0FFH3RSTVWXYZ3B4C5D6E7F
+
+title: Egocentric human demonstrations in real homes, 5 countries
+
+provider:
+  type: organization
+  name: Example Everyday Data Network
+  url: https://example-everyday.invalid
+
+tasks: [human_demonstration, household, healthcare]
+
+embodiments:
+  - { type: human, count: 900, notes: Vetted participant pool with signed AI-training consent. }
+
+environments:
+  - { type: home, realism: [in_the_wild], count: 600 }
+  - { type: kitchen, realism: [in_the_wild], count: 600 }
+  - { type: retail, realism: [in_the_wild], count: 40 }
+
+modalities: [rgb, depth, hand_pose, eye_gaze, audio]
+
+capture_methods: [human_wearable]
+
+capacity:
+  value: 9000
+  unit: hour
+  per: month
+
+geography:
+  available: [US, DE, JP, IN, BR]
+  remote_teleoperation: false
+
+licensing_available:
+  research: true
+  commercial_training: true
+  commercial_deployment: true
+  derivative_models: true
+  redistribution: false
+  exclusive: false
+  provenance_documentation: true
+  consent_artifacts: true
+
+pricing:
+  from: 48
+  currency: USD
+  basis: per_unit
+  unit: hour
+
+delivery_formats: [webdataset, parquet]
+
+publication:
+  visibility: public
+  status: active
+  published_at: "2026-07-15T00:00:00Z"
+  contact: { method: url, value: "https://example-everyday.invalid/partner" }
