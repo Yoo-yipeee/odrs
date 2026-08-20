@@ -8,7 +8,10 @@
     "odrs": "./bin/odrs.mjs"
   },
   "exports": {
-    ".": "./src/index.mjs",
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.mjs"
+    },
     "./schema": "./spec/v0.1/data-request.schema.json",
     "./spec/*": "./spec/*",
     "./package.json": "./package.json"
@@ -36,5 +39,6 @@
     "data-request",
     "specification",
     "json-schema"
-  ]
+  ],
+  "types": "./src/index.d.ts"
 }
